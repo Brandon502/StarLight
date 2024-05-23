@@ -127,6 +127,8 @@ public:
         options.add("Random");
         options.add("Mirror WIP");
         options.add("Reverse WIP");
+        options.add("Box Skew WIP");
+        options.add("Rotate By Skew WIP");
         // options.add("Kaleidoscope WIP");
         return true;
       }

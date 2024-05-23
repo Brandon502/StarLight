@@ -192,13 +192,82 @@ void Fixture::projectAndMap() {
                       // ppf("2Dto2D %d-%d p:%d,%d,%d m:%d,%d,%d\n", indexV, indexP, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z
                       break;
                     case _3D: //2D3D
+                      // xy plane wide z 
+                      // if (leds->size == Coord3D{0,0,0}) { // first
+                      //   leds->size.x = sizeAdjusted.x;;
+                      //   leds->size.y = sizeAdjusted.y;
+                      //   leds->size.z = 1;
+                      // }
+
+                      // mapped.x = pixelAdjusted.x;
+                      // mapped.y = pixelAdjusted.y;
+                      // mapped.z = 0;
+
+                      // testing cube skew mapping for hollow cubes
                       if (leds->size == Coord3D{0,0,0}) { // first
-                        leds->size.x = sizeAdjusted.x + sizeAdjusted.y / 2;
-                        leds->size.y = sizeAdjusted.y / 2 + sizeAdjusted.z;
+                        leds->size.x = 2 * (max(max(sizeAdjusted.x, sizeAdjusted.y), sizeAdjusted.z));
+                        leds->size.y = leds->size.x;
                         leds->size.z = 1;
                       }
-                      mapped.x = pixelAdjusted.x + pixelAdjusted.y / 2;
-                      mapped.y = pixelAdjusted.y / 2 + pixelAdjusted.z;
+
+
+                      int x;
+                      int y;
+                      int centerX = leds->size.x / 2;
+                      int centerY = leds->size.y / 2;
+
+                      //front right panel z = 0
+                      if (pixelAdjusted.z == 0) {
+                        x = pixelAdjusted.x + centerX;
+                        y = pixelAdjusted.y + centerY;
+                      }
+                      //front left panel x = 0
+                      else if (pixelAdjusted.x == 0) {
+                        x = centerX - pixelAdjusted.z;
+                        y = pixelAdjusted.y + centerY;
+                      }
+                      // top panel y = 0
+                      else if (pixelAdjusted.y == 0) {
+                        x = centerX - pixelAdjusted.z;
+                        y = centerY - pixelAdjusted.x;
+                      }
+                      // back left panel doesn't work
+                      else if (pixelAdjusted.z == sizeAdjusted.z -1) {
+                        x = pixelAdjusted.x + centerX;
+                        y = pixelAdjusted.y + centerY;
+                      }
+                      // back right panel doesn't work
+                      else if (pixelAdjusted.x == sizeAdjusted.x -1 ) {
+                        x = centerX - pixelAdjusted.z;
+                        y = pixelAdjusted.y + centerY;
+                      }
+                      //bottom panel doesn't work
+                      else if (pixelAdjusted.y == sizeAdjusted.y - 1) {
+                        x = centerX - pixelAdjusted.z;
+                        y = centerY - pixelAdjusted.x;
+                      }
+
+                      if (y < centerY) { // shift and drop down all leds above the center
+                        int shiftRight = max(1, centerY - y);
+                        int shiftDown = max(0, x - y);
+                        x += shiftRight;
+                        y += shiftDown;
+                      }
+
+                      // shift up all leds except middle leds
+                      int xDistanceCenter = abs(centerX - x);
+                      if (xDistanceCenter > 0) {
+                        int shiftUp = 0;
+                        if (x < centerX) {
+                          shiftUp = (0.5 * xDistanceCenter) + 0.5;
+                        } else {
+                          shiftUp = (0.5 * xDistanceCenter) - 0.5;
+                        }
+                        y -= shiftUp;
+                      }
+
+                      mapped.x = x;
+                      mapped.y = y;
                       mapped.z = 0;
 
                       // ppf("2D to 3D indexV %d %d\n", indexV, size.x);
