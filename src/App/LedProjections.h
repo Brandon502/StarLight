@@ -272,6 +272,7 @@ class PinwheelProjection: public Projection {
     bool reverse   = mdl->getValue("reverse");
     int angleRange = max(1, int(mdl->getValue("angleRange")));
     int petals     = max(1, sizeAdjusted.x); // sizeAdjusted.x == mdl->getValue("Petals");
+    int zTwist     = mdl->getValue("zTwist");
 
     if (swirlVal < 0) { // swap x and y instead of negative swirlVal use transpose later
       swirlVal = abs(swirlVal);
@@ -280,20 +281,21 @@ class PinwheelProjection: public Projection {
       pixelAdjusted.y = temp;
     }
 
-    // float swirlFactor = sqrt(sq(pixelAdjusted.x - center.x) + sq(pixelAdjusted.y - center.y)) * swirlVal;
+    // 3D distance option 
+    // swirlFactor = sqrt(sq(pixelAdjusted.x - center.x) + sq(pixelAdjusted.y - center.y) + sq(pixelAdjusted.z - center.z)) * swirlVal;
     float swirlFactor = hypot(pixelAdjusted.x - center.x, pixelAdjusted.y - center.y) * swirlVal;
-    float radians = atan2(pixelAdjusted.y - center.y, pixelAdjusted.x - center.x);
-    float angle = degrees(radians);
+    float radians     = atan2(pixelAdjusted.y - center.y, pixelAdjusted.x - center.x);
+    float angle       = degrees(radians);
 
-    int value  = round(angle) + 180 + swirlFactor; // Keeping values variables separate for debugging
-    int value2 = value % angleRange;
-    int value3 = value2;
-    if (reverse) value3 = angleRange - value2 - 1; // Reverse
+    int value = round(angle) + 180 + swirlFactor + (zTwist * pixelAdjusted.z);
+    value %= angleRange;
+    
+    if (reverse) value = angleRange - value - 1; // Reverse
 
-    int value4 = round(value3 / (angleRange / float(petals)));
-    value4 = value4 % petals;
+    value = round(value / (angleRange / float(petals))); // Petals
+    value %= petals;
 
-    mapped.x = value4;
+    mapped.x = value;
     mapped.y = 1;
     mapped.z = 1;
 
@@ -301,7 +303,7 @@ class PinwheelProjection: public Projection {
     // if (pixelAdjusted.x == 0) { //print first column
     //   ppf(" pixelAdjusted: %d,%d,%d sizeAdjusted: %d,%d,%d", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z);
     //   ppf(" mapped %d,%d,%d", mapped.x, mapped.y, mapped.z);
-    //   ppf(" angle %f angleRange %d value %d value2 %d value3 %d value4 %d\n", angle, angleRange, value, value2, value3, value4);
+    //   ppf(" angle %f angleRange %d value %d\n", angle, angleRange, value);
     // }
   }
   void controls(Leds &leds, JsonObject parentVar) {
@@ -322,6 +324,18 @@ class PinwheelProjection: public Projection {
     ui->initSlider(parentVar, "swirlVal", 0, -15, 15, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
         ui->setLabel(var, "Swirl"); // Does nothing?
+        return true;
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
+    // Testing zTwist range -42 to 42 arbitrary values for testing. Hide later if not 3D fixture
+    // Not sure if I like this, need to try on physical setup later.
+    ui->initSlider(parentVar, "zTwist", 0, -42, 42, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onUI:
+        ui->setLabel(var, "zTwist");
         return true;
       case onChange:
         leds.fixture->listOfLeds[rowNr]->doMap = true;
