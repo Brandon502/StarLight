@@ -44,7 +44,7 @@ class MultiplyProjection: public Projection {
     // ppf("Multiply %d,%d,%d\n", leds->size.x, leds->size.y, leds->size.z);
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted) {
+  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // if mirrored find the indexV of the mirrored pixel
     bool mirror = mdl->getValue("mirror");
 
@@ -179,9 +179,9 @@ class Preset1Projection: public Projection {
     mp.adjustSizeAndPixel(sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted) {
+  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     MultiplyProjection mp;
-    mp.adjustMapped(mapped, sizeAdjusted, pixelAdjusted);
+    mp.adjustMapped(mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
 
   void adjustXYZ(Leds &leds, Coord3D &pixel) {
@@ -265,9 +265,10 @@ class PinwheelProjection: public Projection {
     sizeAdjusted.z = 1;
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted) {
+  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // UI Variables
-    Coord3D center = mdl->getValue("center");
+    // Coord3D center = mdl->getValue("center");
+    Coord3D center = midPosAdjusted; // lazy testing
     int swirlVal   = mdl->getValue("swirlVal");
     bool reverse   = mdl->getValue("reverse");
     int zTwist     = mdl->getValue("zTwist");
@@ -296,16 +297,16 @@ class PinwheelProjection: public Projection {
     // ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
   }
   void controls(Leds &leds, JsonObject parentVar) {
-    ui->initCoord3D(parentVar, "center", (leds.fixture->fixSize/2).minimum(leds.endPos/2), -10, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onUI:
-        ui->setLabel(var, "Pinwheel Center");
-        return true;
-      case onChange:
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
+    // ui->initCoord3D(parentVar, "center", (leds.fixture->fixSize/2).minimum(leds.endPos/2), -10, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    //   case onUI:
+    //     ui->setLabel(var, "Pinwheel Center");
+    //     return true;
+    //   case onChange:
+    //     leds.fixture->listOfLeds[rowNr]->doMap = true;
+    //     leds.fixture->doMap = true;
+    //     return true;
+    //   default: return false;
+    // }});
     ui->initSlider(parentVar, "swirlVal", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
         ui->setLabel(var, "Swirl");
