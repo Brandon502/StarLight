@@ -260,10 +260,10 @@ public:
       strcat(columnVarID, var["id"]);
       JsonObject insVar; // = ui->cloneVar(var, columnVarID, [this, var](JsonObject insVar){});
 
-      //create a var of the same type. InitVar is not calling chFun which is good in this situation!
+      //create a var of the same type. InitVar is not calling onChange which is good in this situation!
       insVar = ui->initVar(tableVar, columnVarID, var["type"], false, [this, var](JsonObject insVar, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
         case onSetValue:
-          //should not trigger chFun
+          //should not trigger onChange
           for (forUnsigned8 rowNrL = 0; rowNrL < instances.size() && (rowNr == UINT8_MAX || rowNrL == rowNr); rowNrL++) {
             // ppf("initVar dash %s[%d]\n", mdl->varID(insVar), rowNrL);
             //do what setValue is doing except calling onChange
@@ -328,7 +328,7 @@ public:
       instances.clear();
 
       //not needed here as there is no connection
-      // ui->processUiFun("insTbl");
+      // ui->processOnUI("insTbl");
 
       //udp off ??
     }
@@ -464,7 +464,7 @@ public:
 
           ppf("insTbl handleNotifications %d\n", notifierUdp.remoteIP()[3]);
           for (JsonObject childVar: mdl->varChildren("insTbl"))
-            ui->callVarFun(childVar); //rowNr //instance - instances.begin()
+            ui->callVarFun(childVar, UINT8_MAX, onSetValue); //set the value (WIP) ); //rowNr //instance - instances.begin()
 
           web->recvUDPCounter++;
           web->recvUDPBytes+=packetSize;
@@ -558,7 +558,7 @@ public:
     if (erased) {
       ppf("insTbl remove inactive instances\n");
       for (JsonObject childVar: mdl->varChildren("insTbl"))
-        ui->callVarFun(childVar); //no rowNr so all rows updated
+        ui->callVarFun(childVar, UINT8_MAX, onSetValue); //set the value (WIP)); //no rowNr so all rows updated
 
       ui->callVarFun("ddpInst", UINT8_MAX, onUI); //rebuild options
       ui->callVarFun("artInst", UINT8_MAX, onUI); //rebuild options
@@ -796,7 +796,7 @@ public:
           // ppf("updateInstance updRow\n");
 
           for (JsonObject childVar: mdl->varChildren("insTbl"))
-            ui->callVarFun(childVar); //rowNr instance - instances.begin()
+            ui->callVarFun(childVar, UINT8_MAX, onSetValue); //set the value (WIP)); //rowNr instance - instances.begin()
 
           //tbd: now done for all rows, should be done only for updated rows!
         }
@@ -811,12 +811,12 @@ public:
       ui->callVarFun("ddpInst", UINT8_MAX, onUI); //rebuild options
       ui->callVarFun("artInst", UINT8_MAX, onUI); //rebuild options
 
-      // ui->processUiFun("insTbl");
+      // ui->processOnUI("insTbl");
       //run though it sorted to find the right rowNr
       // for (std::vector<InstanceInfo>::iterator instance=instances.begin(); instance!=instances.end(); ++instance) {
       //   if (instance->ip == messageIP) {
           for (JsonObject childVar: mdl->varChildren("insTbl")) {
-            ui->callVarFun(childVar); //no rowNr, update all
+            ui->callVarFun(childVar, UINT8_MAX, onSetValue); //set the value (WIP)); //no rowNr, update all
           }
       //   }
       // }
