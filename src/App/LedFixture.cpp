@@ -125,15 +125,18 @@ void Fixture::projectAndMap() {
                     leds->size.x = sizeAdjusted.distance(midPosAdjusted);
                     leds->size.y = 1;
                     leds->size.z = 1;
+                    if (leds->projectionNr == p_Pinwheel) leds->size = sizeAdjusted; // Fixes Pinwheel
                   }
 
                   mapped = pixelAdjusted;
 
                   if (projection) projection->adjustMapped(mapped, sizeAdjusted, (pixel - startPosAdjusted)/10, midPosAdjusted);
 
-                  mapped.x = mapped.distance(midPosAdjusted);
-                  mapped.y = 0;
-                  mapped.z = 0;
+                  if (leds->projectionNr != p_Pinwheel) { // Fixes Pinwheel
+                    mapped.x = mapped.distance(midPosAdjusted);
+                    mapped.y = 0;
+                    mapped.z = 0;
+                  } 
 
                   indexV = leds->XYZUnprojected(mapped);
                   break;
