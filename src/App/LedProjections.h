@@ -266,53 +266,39 @@ class PinwheelProjection: public Projection {
   }
 
   void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted) {
-    // get mdl variables
-    Coord3D center = mdl->getValue("Center");
+    // UI Variables
+    Coord3D center = mdl->getValue("center");
     int swirlVal   = mdl->getValue("swirlVal");
     bool reverse   = mdl->getValue("reverse");
-    int angleRange = max(1, int(mdl->getValue("angleRange")));
-    int petals     = max(1, sizeAdjusted.x); // sizeAdjusted.x == mdl->getValue("Petals");
     int zTwist     = mdl->getValue("zTwist");
+    int angleRange = max(1, int(mdl->getValue("angleRange")));
+    float petals   = max(1, sizeAdjusted.x); // sizeAdjusted.x == mdl->getValue("Petals");
 
-    if (swirlVal < 0) { // swap x and y instead of negative swirlVal use transpose later
-      swirlVal = abs(swirlVal);
-      int temp = pixelAdjusted.x;
-      pixelAdjusted.x = pixelAdjusted.y;
-      pixelAdjusted.y = temp;
-    }
-
-    // 3D distance option 
-    // swirlFactor = sqrt(sq(pixelAdjusted.x - center.x) + sq(pixelAdjusted.y - center.y) + sq(pixelAdjusted.z - center.z)) * swirlVal;
-    float swirlFactor = hypot(pixelAdjusted.x - center.x, pixelAdjusted.y - center.y) * swirlVal;
-    float radians     = atan2(pixelAdjusted.y - center.y, pixelAdjusted.x - center.x);
-    float angle       = degrees(radians);
-
-    int value = round(angle) + 180 + swirlFactor + (zTwist * pixelAdjusted.z);
-    value %= angleRange;
+    int dx = pixelAdjusted.x - center.x;
+    int dy = pixelAdjusted.y - center.y;
+    int swirlFactor = hypot(dy, dx) * abs(swirlVal); // 2D distance
+    int angle       = degrees(atan2(dy, dx)) + 180;  // 0 - 360
     
-    if (reverse) value = angleRange - value - 1; // Reverse
+    if (swirlVal < 0) angle = 360 - angle; // Reverse Swirl
 
-    value = round(value / (angleRange / float(petals))); // Petals
-    value %= petals;
+    int value = angle + swirlFactor + (zTwist * pixelAdjusted.z);
+    float petalWidth = angleRange / petals;
+    value /= petalWidth;
+    value %= int(petals);
+
+    if (reverse) value = petals - value - 1; // Reverse Movement
 
     mapped.x = value;
-    mapped.y = 1;
-    mapped.z = 1;
+    mapped.y = 0;
+    mapped.z = 0;
 
-    // if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel  Center: (%d, %d) SwirlVal: %f angleRange: %d\n", center.x, center.y, swirlVal, angleRange);
-    // if (pixelAdjusted.x == 0) { //print first column
-    //   ppf(" pixelAdjusted: %d,%d,%d sizeAdjusted: %d,%d,%d", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z);
-    //   ppf(" mapped %d,%d,%d", mapped.x, mapped.y, mapped.z);
-    //   ppf(" angle %f angleRange %d value %d\n", angle, angleRange, value);
-    // }
+    // if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel  Center: (%d, %d) SwirlVal: %d angleRange: %d Petals: %f zTwist: %d\n", center.x, center.y, swirlVal, angleRange, petals, zTwist);
+    // ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
   }
   void controls(Leds &leds, JsonObject parentVar) {
-    // Bad idea to use fixture->fixSize? Segments default won't be centered.
-    // leds.endPos works for "segmenting" use min(fixSize, endPos)?
-    // min(leds.fixture->fixSize/2, leds.endPos/2) syntax doesn't work CRGB error?
-    ui->initCoord3D(parentVar, "Center", {min(leds.fixture->fixSize.x/2, leds.endPos.x/2), min(leds.fixture->fixSize.y/2, leds.endPos.y/2), min(leds.fixture->fixSize.z/2, leds.endPos.z/2)}, -10, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initCoord3D(parentVar, "center", (leds.fixture->fixSize/2).minimum(leds.endPos/2), -10, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
-        ui->setLabel(var, "Pinwheel Center"); // Does nothing?
+        ui->setLabel(var, "Pinwheel Center");
         return true;
       case onChange:
         leds.fixture->listOfLeds[rowNr]->doMap = true;
@@ -320,10 +306,9 @@ class PinwheelProjection: public Projection {
         return true;
       default: return false;
     }});
-    // Slider range supposed to be 0 - 255, but -15 to 15 seems to work fine?
-    ui->initSlider(parentVar, "swirlVal", 0, -15, 15, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initSlider(parentVar, "swirlVal", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
-        ui->setLabel(var, "Swirl"); // Does nothing?
+        ui->setLabel(var, "Swirl");
         return true;
       case onChange:
         leds.fixture->listOfLeds[rowNr]->doMap = true;
@@ -331,18 +316,27 @@ class PinwheelProjection: public Projection {
         return true;
       default: return false;
     }});
-    // Testing zTwist range -42 to 42 arbitrary values for testing. Hide later if not 3D fixture
-    // Not sure if I like this, need to try on physical setup later.
-    ui->initSlider(parentVar, "zTwist", 0, -42, 42, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onUI:
-        ui->setLabel(var, "zTwist");
-        return true;
+    // use reverse class when implemented
+    ui->initCheckBox(parentVar, "reverse", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
       default: return false;
     }});
+    // Testing zTwist range -42 to 42 arbitrary values for testing. Hide if not 3D fixture. Select pinwheel while using 3D fixture.
+    if (leds.projectionDimension == _3D) {
+      ui->initSlider(parentVar, "zTwist", 0, -42, 42, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onUI:
+          ui->setLabel(var, "zTwist");
+          return true;
+        case onChange:
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
     // Angle range 0 - angleRange. For testing purposes
     ui->initNumber(parentVar, "angleRange", 360, 1, 720, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
@@ -359,17 +353,6 @@ class PinwheelProjection: public Projection {
         return true;
       default: return false;
     }});
-
-    // use reverse class when implemented
-    ui->initCheckBox(parentVar, "reverse", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
-    // UI add multiply / mirror / tilt pan roll
-
   }
 }; //PinwheelProjection
 
