@@ -26,6 +26,113 @@ class DefaultProjection: public Projection {
   //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    switch (leds.effectDimension) {
+    case _1D: //effectDimension 1DxD
+      if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
+        sizeAdjusted.x = sizeAdjusted.distance(midPosAdjusted);
+        sizeAdjusted.y = 1;
+        sizeAdjusted.z = 1;
+      }
+      break;
+    case _2D: //effectDimension
+      switch(leds.projectionDimension) {
+        case _1D: //2D1D
+          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
+            sizeAdjusted.x = sqrt(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z); //only one is > 1, square root
+            sizeAdjusted.y = sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z / sizeAdjusted.x;
+            sizeAdjusted.z = 1;
+          }
+          break;
+        case _2D: //2D2D
+          //find the 2 axis 
+          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
+            if (leds, sizeAdjusted.x > 1) {
+              sizeAdjusted.x = sizeAdjusted.x;
+              if (leds, sizeAdjusted.y > 1) sizeAdjusted.y = sizeAdjusted.y; else sizeAdjusted.y = sizeAdjusted.z;
+            } else {
+              sizeAdjusted.x = sizeAdjusted.y;
+              sizeAdjusted.y = sizeAdjusted.z;
+            }
+            sizeAdjusted.z = 1;
+          }
+          break;
+        case _3D: //2D3D
+          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
+            sizeAdjusted.x = sizeAdjusted.x + sizeAdjusted.y / 2;
+            sizeAdjusted.y = sizeAdjusted.y / 2 + sizeAdjusted.z;
+            sizeAdjusted.z = 1;
+          }
+          break;
+      }
+        case _3D: //effectDimension
+          switch(leds.projectionDimension) {
+            case _1D:
+              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
+                sizeAdjusted.x = std::pow(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z, 1/3); //only one is > 1, cube root
+                sizeAdjusted.y = sizeAdjusted.x;
+                sizeAdjusted.z = sizeAdjusted.x;
+              }
+              break;
+            case _2D:
+              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first    // This does nothing?
+                sizeAdjusted.x = sizeAdjusted.x; //2 of the 3 sizes are > 1, so one dimension of the effect is 1
+                sizeAdjusted.y = sizeAdjusted.y;
+                sizeAdjusted.z = sizeAdjusted.z;
+              }
+              break;
+            case _3D:
+              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first    // This does nothing?
+                sizeAdjusted.x = sizeAdjusted.x;
+                sizeAdjusted.y = sizeAdjusted.y;
+                sizeAdjusted.z = sizeAdjusted.z;
+              }
+          break;  
+    
+      }
+    }
+  }
+
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+    switch (leds.effectDimension) {
+      case _1D: //effectDimension 1DxD
+        mapped = pixelAdjusted;
+
+        mapped.x = mapped.distance(midPosAdjusted);
+        mapped.y = 0;
+        mapped.z = 0;
+        break;
+      case _2D: //effectDimension
+        switch(leds.projectionDimension) {
+          case _1D: //2D1D
+            mapped.x = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) % leds.size.x; // only one > 0
+            mapped.y = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) / leds.size.x; // all rows next to each other
+            mapped.z = 0;
+            break;
+          case _2D: //2D2D
+            if (leds, sizeAdjusted.x > 1) {
+              mapped.x = pixelAdjusted.x;
+              if (leds, sizeAdjusted.y > 1) mapped.y = pixelAdjusted.y; else mapped.y = pixelAdjusted.z;
+            } else {
+              mapped.x = pixelAdjusted.y;
+              mapped.y = pixelAdjusted.z;
+            }
+            mapped.z = 0;
+            break;
+          case _3D: //2D3D
+            mapped.x = pixelAdjusted.x + pixelAdjusted.y / 2;
+            mapped.y = pixelAdjusted.y / 2 + pixelAdjusted.z;
+            mapped.z = 0;
+            break;
+        }
+      case _3D: //effectDimension
+        mapped = pixelAdjusted;
+    }
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+  }
+
 }; //DefaultProjection
 
 class MultiplyProjection: public Projection {
@@ -35,16 +142,16 @@ class MultiplyProjection: public Projection {
 
   public: //to use in Preset1Projection
 
-  void adjustSizeAndPixel(Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     Coord3D proMulti = mdl->getValue("proMulti"); //, rowNr
     //promulti can be 0,0,0 but /= protects from /div0
     sizeAdjusted /= proMulti; sizeAdjusted = sizeAdjusted.maximum(Coord3D{1,1,1}); //size min 1,1,1
     midPosAdjusted /= proMulti;
     pixelAdjusted = pixelAdjusted%sizeAdjusted; // pixel % size
-    // ppf("Multiply %d,%d,%d\n", leds->size.x, leds->size.y, leds->size.z);
+    // ppf("Multiply %d,%d,%d\n", sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z);
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // if mirrored find the indexV of the mirrored pixel
     bool mirror = mdl->getValue("mirror");
 
@@ -174,14 +281,14 @@ class Preset1Projection: public Projection {
   //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
-  void adjustSizeAndPixel(Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     MultiplyProjection mp;
-    mp.adjustSizeAndPixel(sizeAdjusted, pixelAdjusted, midPosAdjusted);
+    mp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     MultiplyProjection mp;
-    mp.adjustMapped(mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+    mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
 
   void adjustXYZ(Leds &leds, Coord3D &pixel) {
@@ -259,13 +366,13 @@ class PinwheelProjection: public Projection {
   const char * name() {return "Pinwheel WIP";}
   const char * tags() {return "💡";}
 
-  void adjustSizeAndPixel(Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     sizeAdjusted.x = mdl->getValue("Petals");
     sizeAdjusted.y = 1;
     sizeAdjusted.z = 1;
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // get mdl variables
     // Coord3D center = mdl->getValue("Center");
     Coord3D center = midPosAdjusted; // lazy testing
@@ -300,12 +407,12 @@ class PinwheelProjection: public Projection {
     mapped.y = 1;
     mapped.z = 1;
 
-    // if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel Center: (%d, %d) SwirlVal: %f angleRange: %d\n", midPosAdjusted.x, midPosAdjusted.y, swirlVal, angleRange);
-    // if (pixelAdjusted.x == 0) { //print first column
-    //   ppf(" pixelAdjusted: %d,%d,%d sizeAdjusted: %d,%d,%d", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z);
-    //   ppf(" mapped %d,%d,%d", mapped.x, mapped.y, mapped.z);
-    //   ppf(" angle %f angleRange %d value %d\n", angle, angleRange, value);
-    // }
+    if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel Center: (%d, %d) SwirlVal: %f angleRange: %d\n", midPosAdjusted.x, midPosAdjusted.y, swirlVal, angleRange);
+    if (pixelAdjusted.x == 0) { //print first column
+      ppf(" pixelAdjusted: %d,%d,%d sizeAdjusted: %d,%d,%d", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z);
+      ppf(" mapped %d,%d,%d", mapped.x, mapped.y, mapped.z);
+      ppf(" angle %f angleRange %d value %d\n", angle, angleRange, value);
+    }
   }
   void controls(Leds &leds, JsonObject parentVar) {
     // Slider range supposed to be 0 - 255, but -15 to 15 seems to work fine?
