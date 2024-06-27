@@ -27,7 +27,7 @@ class DefaultProjection: public Projection {
   public:
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
-    // if (sizeAdjusted != Coord3D{0,0,0} && leds.size != Coord3D{0,0,0}) return; //Uncomment if LedFixture.cpp if statement is modified/removed
+    if (sizeAdjusted != Coord3D{0,0,0} && leds.size != Coord3D{0,0,0}) return;
     switch (leds.effectDimension) {
       case _1D: // effectDimension 1DxD
           sizeAdjusted.x = sizeAdjusted.distance(midPosAdjusted);
@@ -311,7 +311,49 @@ class ReverseProjection: public Projection {
   const char * name() {return "Reverse WIP";}
   const char * tags() {return "💡";}
 
+  public:
+
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    // UI Variables
+    bool reverseX = mdl->getValue("reverse X");
+    bool reverseY = mdl->getValue("reverse Y");
+    bool reverseZ = mdl->getValue("reverse Z");
+
+    if (reverseX) pixelAdjusted.x = sizeAdjusted.x - pixelAdjusted.x;
+    if (reverseY) pixelAdjusted.y = sizeAdjusted.y - pixelAdjusted.y;
+    if (reverseZ) pixelAdjusted.z = sizeAdjusted.z - pixelAdjusted.z;
+
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {    
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
   void controls(Leds &leds, JsonObject parentVar) {
+    ui->initCheckBox(parentVar, "reverse X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
   }
 }; //ReverseProjection
 
@@ -319,7 +361,58 @@ class MirrorProjection: public Projection {
   const char * name() {return "Mirror WIP";}
   const char * tags() {return "💡";}
 
+  public:
+
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    // UI Variables
+    bool mirrorX = mdl->getValue("mirror X");
+    bool mirrorY = mdl->getValue("mirror Y");
+    bool mirrorZ = mdl->getValue("mirror Z");
+
+    if (mirrorX) {
+      if (pixelAdjusted.x > sizeAdjusted.x / 2) pixelAdjusted.x = sizeAdjusted.x - pixelAdjusted.x;
+      sizeAdjusted.x /= 2;
+    }
+    if (mirrorY) {
+      if (pixelAdjusted.y > sizeAdjusted.y / 2) pixelAdjusted.y = sizeAdjusted.y - pixelAdjusted.y;
+      sizeAdjusted.y /= 2;
+    }
+    if (mirrorZ) {
+      if (pixelAdjusted.z > sizeAdjusted.z / 2) pixelAdjusted.z = sizeAdjusted.z - pixelAdjusted.z;
+      sizeAdjusted.z /= 2;
+    }
+
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {    
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
   void controls(Leds &leds, JsonObject parentVar) {
+    ui->initCheckBox(parentVar, "mirror X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "mirror Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "mirror Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.fixture->listOfLeds[rowNr]->doMap = true;
+        leds.fixture->doMap = true;
+        return true;
+      default: return false;
+    }});
   }
 }; //MirrorProjection
 
@@ -356,6 +449,11 @@ class PinwheelProjection: public Projection {
   public:
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    MirrorProjection mp; // Remove after testing
+    mp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted); // Remove after testing
+    ReverseProjection rp; // Remove after testing
+    rp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted); // Remove after testing
+    
     sizeAdjusted.x = mdl->getValue("Petals");
     sizeAdjusted.y = 1;
     sizeAdjusted.z = 1;
@@ -438,6 +536,12 @@ class PinwheelProjection: public Projection {
         return true;
       default: return false;
     }});
+
+    MirrorProjection mp;  // Remove after testing
+    mp.controls(leds, parentVar); // Remove after testing
+    ReverseProjection rp; // Remove after testing
+    rp.controls(leds, parentVar); // Remove after testing
+
   }
 }; //PinwheelProjection
 

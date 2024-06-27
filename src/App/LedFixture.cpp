@@ -111,9 +111,9 @@ void Fixture::projectAndMap() {
 
               //using cached virtual class methods!
               // Only call adjustSizeAndPixelCached once if leds->size = 0,0,0? Not sure if other projections will need to adjust multiple times.
-              if (projection && leds->size == Coord3D({0,0,0})) (projection->*leds->adjustSizeAndPixelCached)(*leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+              // if (projection && leds->size == Coord3D({0,0,0})) 
+              (projection->*leds->adjustSizeAndPixelCached)(*leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
               
-
               if (leds->size == Coord3D{0,0,0}) { // first
                 ppf("projectAndMap first leds[%d] size:%d,%d,%d s:%d,%d,%d e:%d,%d,%d\n", rowNr, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, startPosAdjusted.x, startPosAdjusted.y, startPosAdjusted.z, endPosAdjusted.x, endPosAdjusted.y, endPosAdjusted.z);
                 leds->size = sizeAdjusted;
@@ -125,7 +125,7 @@ void Fixture::projectAndMap() {
               Coord3D mapped;
 
               //using cached virtual class methods!
-              if (projection) (projection->*leds->adjustMappedCached)(*leds, mapped, sizeAdjusted, (pixel - startPosAdjusted)/10, midPosAdjusted);
+              if (projection) (projection->*leds->adjustMappedCached)(*leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
               indexV = leds->XYZUnprojected(mapped);
                   
               leds->nrOfLeds = leds->size.x * leds->size.y * leds->size.z;
