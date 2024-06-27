@@ -183,6 +183,16 @@ class TiltPanRollProjection: public Projection {
 
   public: //to use in Preset1Projection
 
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
   void adjustXYZ(Leds &leds, Coord3D &pixel) {
     #ifdef STARBASE_USERMOD_MPU6050
       if (leds.proGyro) {
