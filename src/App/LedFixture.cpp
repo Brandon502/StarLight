@@ -110,19 +110,19 @@ void Fixture::projectAndMap() {
               mdl->getValueRowNr = rowNr; //run projection functions in the right rowNr context
 
               //using cached virtual class methods!
-              if (projection) (projection->*leds->adjustSizeAndPixelCached)(*leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+              // Only call adjustSizeAndPixelCached once if leds->size = 0,0,0? Not sure if other projections will need to adjust multiple times.
+              if (projection && leds->size == Coord3D({0,0,0})) (projection->*leds->adjustSizeAndPixelCached)(*leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+              
 
               if (leds->size == Coord3D{0,0,0}) { // first
                 ppf("projectAndMap first leds[%d] size:%d,%d,%d s:%d,%d,%d e:%d,%d,%d\n", rowNr, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, startPosAdjusted.x, startPosAdjusted.y, startPosAdjusted.z, endPosAdjusted.x, endPosAdjusted.y, endPosAdjusted.z);
+                leds->size = sizeAdjusted;
               }
-
-              leds->size = sizeAdjusted;
 
               //calculate the indexV to add to current physical led to
               stackUnsigned16 indexV = UINT16_MAX;
 
               Coord3D mapped;
-              mapped = pixelAdjusted;
 
               //using cached virtual class methods!
               if (projection) (projection->*leds->adjustMappedCached)(*leds, mapped, sizeAdjusted, (pixel - startPosAdjusted)/10, midPosAdjusted);

@@ -13,7 +13,6 @@
 
 class NoneProjection: public Projection {
   const char * name() {return "None";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -23,111 +22,98 @@ class NoneProjection: public Projection {
 
 class DefaultProjection: public Projection {
   const char * name() {return "Default";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
+  public:
+
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    // if (sizeAdjusted != Coord3D{0,0,0} && leds.size != Coord3D{0,0,0}) return; //Uncomment if LedFixture.cpp if statement is modified/removed
     switch (leds.effectDimension) {
-    case _1D: //effectDimension 1DxD
-      if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
-        sizeAdjusted.x = sizeAdjusted.distance(midPosAdjusted);
-        sizeAdjusted.y = 1;
-        sizeAdjusted.z = 1;
-      }
-      break;
-    case _2D: //effectDimension
-      switch(leds.projectionDimension) {
-        case _1D: //2D1D
-          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
-            sizeAdjusted.x = sqrt(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z); //only one is > 1, square root
-            sizeAdjusted.y = sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z / sizeAdjusted.x;
-            sizeAdjusted.z = 1;
+      case _1D: // effectDimension 1DxD
+          sizeAdjusted.x = sizeAdjusted.distance(midPosAdjusted);
+          sizeAdjusted.y = 1;
+          sizeAdjusted.z = 1;
+          break;
+      case _2D: // effectDimension 2D
+          switch (leds.projectionDimension) {
+              case _1D: // 2D1D
+                  sizeAdjusted.x = sqrt(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z); // only one is > 1, square root
+                  sizeAdjusted.y = sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z / sizeAdjusted.x;
+                  sizeAdjusted.z = 1;
+                  break;
+              case _2D: // 2D2D
+                  // find the 2 axes
+                  if (sizeAdjusted.x > 1) {
+                      if (sizeAdjusted.y <= 1) {
+                          sizeAdjusted.y = sizeAdjusted.z;
+                      }
+                  } else {
+                      sizeAdjusted.x = sizeAdjusted.y;
+                      sizeAdjusted.y = sizeAdjusted.z;
+                  }
+                  sizeAdjusted.z = 1;
+                  break;
+              case _3D: // 2D3D
+                  sizeAdjusted.x = sizeAdjusted.x + sizeAdjusted.y / 2;
+                  sizeAdjusted.y = sizeAdjusted.y / 2 + sizeAdjusted.z;
+                  sizeAdjusted.z = 1;
+                  break;
           }
           break;
-        case _2D: //2D2D
-          //find the 2 axis 
-          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
-            if (leds, sizeAdjusted.x > 1) {
-              sizeAdjusted.x = sizeAdjusted.x;
-              if (leds, sizeAdjusted.y > 1) sizeAdjusted.y = sizeAdjusted.y; else sizeAdjusted.y = sizeAdjusted.z;
-            } else {
-              sizeAdjusted.x = sizeAdjusted.y;
-              sizeAdjusted.y = sizeAdjusted.z;
-            }
-            sizeAdjusted.z = 1;
+      case _3D: // effectDimension 3D
+          switch (leds.projectionDimension) {
+              case _1D:
+                  sizeAdjusted.x = std::pow(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z, 1/3); // only one is > 1, cube root
+                  break;
+              case _2D:
+                  break;
+              case _3D:
+                  break;
           }
           break;
-        case _3D: //2D3D
-          if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
-            sizeAdjusted.x = sizeAdjusted.x + sizeAdjusted.y / 2;
-            sizeAdjusted.y = sizeAdjusted.y / 2 + sizeAdjusted.z;
-            sizeAdjusted.z = 1;
-          }
-          break;
-      }
-        case _3D: //effectDimension
-          switch(leds.projectionDimension) {
-            case _1D:
-              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first
-                sizeAdjusted.x = std::pow(sizeAdjusted.x * sizeAdjusted.y * sizeAdjusted.z, 1/3); //only one is > 1, cube root
-                sizeAdjusted.y = sizeAdjusted.x;
-                sizeAdjusted.z = sizeAdjusted.x;
-              }
-              break;
-            case _2D:
-              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first    // This does nothing?
-                sizeAdjusted.x = sizeAdjusted.x; //2 of the 3 sizes are > 1, so one dimension of the effect is 1
-                sizeAdjusted.y = sizeAdjusted.y;
-                sizeAdjusted.z = sizeAdjusted.z;
-              }
-              break;
-            case _3D:
-              if (leds, sizeAdjusted == Coord3D{0,0,0}) { // first    // This does nothing?
-                sizeAdjusted.x = sizeAdjusted.x;
-                sizeAdjusted.y = sizeAdjusted.y;
-                sizeAdjusted.z = sizeAdjusted.z;
-              }
-          break;  
-    
-      }
     }
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     switch (leds.effectDimension) {
-      case _1D: //effectDimension 1DxD
-        mapped = pixelAdjusted;
-
-        mapped.x = mapped.distance(midPosAdjusted);
-        mapped.y = 0;
-        mapped.z = 0;
-        break;
-      case _2D: //effectDimension
-        switch(leds.projectionDimension) {
-          case _1D: //2D1D
-            mapped.x = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) % leds.size.x; // only one > 0
-            mapped.y = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) / leds.size.x; // all rows next to each other
-            mapped.z = 0;
-            break;
-          case _2D: //2D2D
-            if (leds, sizeAdjusted.x > 1) {
-              mapped.x = pixelAdjusted.x;
-              if (leds, sizeAdjusted.y > 1) mapped.y = pixelAdjusted.y; else mapped.y = pixelAdjusted.z;
-            } else {
-              mapped.x = pixelAdjusted.y;
-              mapped.y = pixelAdjusted.z;
-            }
-            mapped.z = 0;
-            break;
-          case _3D: //2D3D
-            mapped.x = pixelAdjusted.x + pixelAdjusted.y / 2;
-            mapped.y = pixelAdjusted.y / 2 + pixelAdjusted.z;
-            mapped.z = 0;
-            break;
-        }
-      case _3D: //effectDimension
-        mapped = pixelAdjusted;
+      case _1D: // effectDimension 1DxD
+          mapped.x = pixelAdjusted.distance(midPosAdjusted);
+          mapped.y = 0;
+          mapped.z = 0;
+          break;
+      case _2D: // effectDimension 2D
+          switch (leds.projectionDimension) {
+              case _1D: // 2D1D
+                  mapped.x = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) % leds.size.x; // only one > 0
+                  mapped.y = (pixelAdjusted.x + pixelAdjusted.y + pixelAdjusted.z) / leds.size.x; // all rows next to each other
+                  mapped.z = 0;
+                  break;
+              case _2D: // 2D2D
+                  if (sizeAdjusted.x > 1) {
+                      mapped.x = pixelAdjusted.x;
+                      if (sizeAdjusted.y > 1) {
+                          mapped.y = pixelAdjusted.y;
+                      } else {
+                          mapped.y = pixelAdjusted.z;
+                      }
+                  } else {
+                      mapped.x = pixelAdjusted.y;
+                      mapped.y = pixelAdjusted.z;
+                  }
+                  mapped.z = 0;
+                  break;
+              case _3D: // 2D3D
+                  mapped.x = pixelAdjusted.x + pixelAdjusted.y / 2;
+                  mapped.y = pixelAdjusted.y / 2 + pixelAdjusted.z;
+                  mapped.z = 0;
+                  break;
+          }
+          break;
+      case _3D: // effectDimension 3D
+          mapped = pixelAdjusted;
+          break;
     }
+    ppf("Default %dD Effect -> %dD   %d,%d,%d -> %d,%d,%d\n", leds.effectDimension, leds.projectionDimension, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z);
   }
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -137,12 +123,13 @@ class DefaultProjection: public Projection {
 
 class MultiplyProjection: public Projection {
   const char * name() {return "Multiply";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   public: //to use in Preset1Projection
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     Coord3D proMulti = mdl->getValue("proMulti"); //, rowNr
     //promulti can be 0,0,0 but /= protects from /div0
     sizeAdjusted /= proMulti; sizeAdjusted = sizeAdjusted.maximum(Coord3D{1,1,1}); //size min 1,1,1
@@ -152,6 +139,8 @@ class MultiplyProjection: public Projection {
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     // if mirrored find the indexV of the mirrored pixel
     bool mirror = mdl->getValue("mirror");
 
@@ -190,7 +179,6 @@ class MultiplyProjection: public Projection {
 
 class TiltPanRollProjection: public Projection {
   const char * name() {return "TiltPanRoll";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   public: //to use in Preset1Projection
@@ -252,41 +240,38 @@ class TiltPanRollProjection: public Projection {
 
 class DistanceFromPointProjection: public Projection {
   const char * name() {return "Distance ⌛";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   public: //to use in Preset1Projection
 
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+  }
+
   void controls(Leds &leds, JsonObject parentVar) {
-    // ui->initCoord3D(parentVar, "proCenter", {8,8,8}, 0, NUM_LEDS_Max, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-    //   case onUI:
-    //     ui->setLabel(var, "Center");
-    //     return true;
-    //   case onChange:
-    //     //initiate projectAndMap
-    //     ppf("proCenter %d %d\n", rowNr, leds.fixture->listOfLeds.size());
-    //     if (rowNr < leds.fixture->listOfLeds.size()) {
-    //       leds.fixture->listOfLeds[rowNr]->doMap = true; //Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
-    //       leds.fixture->doMap = true;
-    //     }
-    //     // ui->setLabel(var, "Size");
-    //     return true;
-    //   default: return false;
-    // }});
   }
 }; //DistanceFromPointProjection
 
 class Preset1Projection: public Projection {
   const char * name() {return "Preset1";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     MultiplyProjection mp;
     mp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+    DefaultProjection dp;
+    dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     MultiplyProjection mp;
     mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
@@ -297,8 +282,6 @@ class Preset1Projection: public Projection {
   }
 
   void controls(Leds &leds, JsonObject parentVar) {
-    DistanceFromPointProjection dp;
-    dp.controls(leds, parentVar);
     MultiplyProjection mp;
     mp.controls(leds, parentVar);
     TiltPanRollProjection tp;
@@ -308,7 +291,6 @@ class Preset1Projection: public Projection {
 
 class RandomProjection: public Projection {
   const char * name() {return "Random";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -317,7 +299,6 @@ class RandomProjection: public Projection {
 
 class ReverseProjection: public Projection {
   const char * name() {return "Reverse WIP";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💡";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -326,7 +307,6 @@ class ReverseProjection: public Projection {
 
 class MirrorProjection: public Projection {
   const char * name() {return "Mirror WIP";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💡";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -335,7 +315,6 @@ class MirrorProjection: public Projection {
 
 class GroupingProjection: public Projection {
   const char * name() {return "Grouping WIP";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💡";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -344,7 +323,6 @@ class GroupingProjection: public Projection {
 
 class SpacingProjection: public Projection {
   const char * name() {return "Spacing WIP";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💡";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -353,7 +331,6 @@ class SpacingProjection: public Projection {
 
 class KaleidoscopeProjection: public Projection {
   const char * name() {return "Kaleidoscope WIP";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💫";}
 
   void controls(Leds &leds, JsonObject parentVar) {
@@ -366,24 +343,24 @@ class PinwheelProjection: public Projection {
   const char * name() {return "Pinwheel WIP";}
   const char * tags() {return "💡";}
 
+  public:
+
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     sizeAdjusted.x = mdl->getValue("Petals");
     sizeAdjusted.y = 1;
     sizeAdjusted.z = 1;
   }
 
-  void adjustMapped(Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+  void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // UI Variables
-    // Coord3D center = mdl->getValue("center");
-    Coord3D center = midPosAdjusted; // lazy testing
     int swirlVal   = mdl->getValue("swirlVal");
     bool reverse   = mdl->getValue("reverse");
     int zTwist     = mdl->getValue("zTwist");
     int angleRange = max(1, int(mdl->getValue("angleRange")));
-    float petals   = max(1, sizeAdjusted.x); // sizeAdjusted.x == mdl->getValue("Petals");
+    float petals   = max(1, int(mdl->getValue("Petals")));
 
-    int dx = pixelAdjusted.x - center.x;
-    int dy = pixelAdjusted.y - center.y;
+    int dx = pixelAdjusted.x - midPosAdjusted.x;
+    int dy = pixelAdjusted.y - midPosAdjusted.y;
     int swirlFactor = hypot(dy, dx) * abs(swirlVal); // 2D distance
     int angle       = degrees(atan2(dy, dx)) + 180;  // 0 - 360
     
@@ -400,20 +377,10 @@ class PinwheelProjection: public Projection {
     mapped.y = 0;
     mapped.z = 0;
 
-    // if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel  Center: (%d, %d) SwirlVal: %d angleRange: %d Petals: %f zTwist: %d\n", center.x, center.y, swirlVal, angleRange, petals, zTwist);
-    // ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
+    if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel  Center: (%d, %d) SwirlVal: %d angleRange: %d Petals: %f zTwist: %d\n", midPosAdjusted.x, midPosAdjusted.y, swirlVal, angleRange, petals, zTwist);
+    ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
   }
   void controls(Leds &leds, JsonObject parentVar) {
-    // ui->initCoord3D(parentVar, "center", (leds.fixture->fixSize/2).minimum(leds.endPos/2), -10, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-    //   case onUI:
-    //     ui->setLabel(var, "Pinwheel Center");
-    //     return true;
-    //   case onChange:
-    //     leds.fixture->listOfLeds[rowNr]->doMap = true;
-    //     leds.fixture->doMap = true;
-    //     return true;
-    //   default: return false;
-    // }});
     ui->initSlider(parentVar, "swirlVal", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
         ui->setLabel(var, "Swirl");
@@ -466,7 +433,6 @@ class PinwheelProjection: public Projection {
 
 class TestProjection: public Projection {
   const char * name() {return "Test";}
-  //uint8_t dim() {return _1D;} // every projection should work for all D
   const char * tags() {return "💡";}
 
   void controls(Leds &leds, JsonObject parentVar) {
