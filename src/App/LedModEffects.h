@@ -101,17 +101,20 @@ public:
     //load projections
     fixture.projections.push_back(new NoneProjection);
     fixture.projections.push_back(new DefaultProjection);
-    fixture.projections.push_back(new MultiplyProjection);
+    // fixture.projections.push_back(new MultiplyProjection);
     fixture.projections.push_back(new TiltPanRollProjection);
     fixture.projections.push_back(new DistanceFromPointProjection);
     fixture.projections.push_back(new Preset1Projection);
     fixture.projections.push_back(new RandomProjection);
-    fixture.projections.push_back(new ReverseProjection);
-    fixture.projections.push_back(new MirrorProjection);
-    fixture.projections.push_back(new GroupingProjection);
-    fixture.projections.push_back(new SpacingProjection);
-    fixture.projections.push_back(new KaleidoscopeProjection);
+    // fixture.projections.push_back(new ReverseProjection);
+    // fixture.projections.push_back(new MirrorProjection);
+    // fixture.projections.push_back(new GroupingProjection);
+    // fixture.projections.push_back(new SpacingProjection);
+    // fixture.projections.push_back(new KaleidoscopeProjection);
     fixture.projections.push_back(new PinwheelProjection);
+    // fixture.projections.push_back(new TransposeProjection);
+    fixture.projections.push_back(new PinwheelModProjection);
+    fixture.projections.push_back(new DefaultModProjection);
   };
 
   void setup() {

@@ -108,6 +108,12 @@ struct Coord3D {
   Coord3D operator/(unsigned8 rhs) {
     return Coord3D{x / rhs, y / rhs, z / rhs};
   }
+  Coord3D operator+(unsigned8 rhs) {
+    return Coord3D{x + rhs, y + rhs, z + rhs};
+  }
+  Coord3D operator-(unsigned8 rhs) {
+    return Coord3D{x - rhs, y - rhs, z - rhs};
+  }
   //move the coordinate one step closer to the goal, if difference in coordinates (used in GenFix)
   Coord3D advance(Coord3D goal, uint8_t step) {
     if (x != goal.x) x += (x<goal.x)?step:-step;

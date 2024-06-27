@@ -34,17 +34,20 @@ enum ProjectionsE
 {
   p_None,
   p_Default,
-  p_Multiply,
+  // p_Multiply,
   p_TiltPanRoll,
   p_DistanceFromPoint,
   p_Preset1,
   p_Random,
-  p_Reverse,
-  p_Mirror,
-  p_Grouping,
-  p_Spacing,
-  p_Kaleidoscope,
+  // p_Reverse,
+  // p_Mirror,
+  // p_Grouping,
+  // p_Spacing,
+  // p_Kaleidoscope,
   p_Pinwheel,
+  // p_Transpose,
+  p_PinwheelMod,
+  p_DefaultMod,
   p_count // keep as last entry
 };
 
