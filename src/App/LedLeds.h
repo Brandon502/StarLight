@@ -290,6 +290,14 @@ public:
   unsigned8 proPanSpeed = 128;
   unsigned8 proRollSpeed = 128;
 
+  byte reverseTranform = 0; 
+  // bit 0: reverse x
+  // bit 1: reverse y
+  // bit 2: reverse z
+  // bit 3: transform XY
+  // bit 4: transform XZ
+  // bit 5: transform YZ
+
   SharedData sharedData;
 
   std::vector<PhysMap> mappingTable;
@@ -326,6 +334,7 @@ public:
     ppf("Leds destructor\n");
     fadeToBlackBy(100);
     doMap = true; // so loop is not running while deleting
+    reverseTranform = 0;
     for (PhysMap &map:mappingTable) {
       if (map.isMultipleIndexes()) {
         map.indexes->clear();

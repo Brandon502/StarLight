@@ -18,6 +18,7 @@
 
 //load fixture json file, parse it and depending on the projection, create a mapping for it
 void Fixture::projectAndMap() {
+  unsigned long start = millis();
   char fileName[32] = "";
 
   if (files->seqNrToName(fileName, fixtureNr)) { // get the fixture.json
@@ -28,6 +29,7 @@ void Fixture::projectAndMap() {
     for (Leds *leds: listOfLeds) {
       if (leds->doMap) {
         leds->fill_solid(CRGB::Black, true); //no blend
+        leds->reverseTranform = 0;
 
         ppf("projectAndMap clear leds[%d] fx:%d pro:%d\n", rowNr, leds->fx, leds->projectionNr);
         leds->size = Coord3D{0,0,0};
@@ -341,4 +343,5 @@ void Fixture::projectAndMap() {
     ppf("projectAndMap: Filename for fixture %d not found\n", fixtureNr);
 
   doMap = false;
+  ppf("projectAndMap done %d ms\n", millis()-start);
 }

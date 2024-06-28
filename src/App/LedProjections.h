@@ -344,7 +344,7 @@ class MirrorProjection: public Projection {
 
   public:
 
-void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+  void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
     bool mirrorX = mdl->getValue("mirror X");
     bool mirrorY = mdl->getValue("mirror Y");
@@ -545,6 +545,91 @@ class TiltPanRollProjection: public Projection { // Currently calls default proj
   }
 }; //TiltPanRollProjection
 
+class NewTransposeProjection: public Projection { // Transformer
+  const char * name() {return "Transpose";}
+  const char * tags() {return "🔄";}
+
+  public:
+
+  void adjustXYZ(Leds &leds, Coord3D &pixel) {
+
+    if (leds.reverseTranform == 0) return;
+
+    bool transposeXY = leds.reverseTranform & (1 << 3); //mdl->getValue("transpose XY")
+    if (transposeXY) { int temp = pixel.x; pixel.x = pixel.y; pixel.y = temp; }
+
+    if (leds.projectionDimension < _3D) return;
+    bool transposeXZ = leds.reverseTranform & (1 << 4); //mdl->getValue("transpose XZ");
+    if (transposeXZ) { int temp = pixel.x; pixel.x = pixel.z; pixel.z = temp; }
+    bool transposeYZ = leds.reverseTranform & (1 << 5); //mdl->getValue("transpose YZ");
+    if (transposeYZ) { int temp = pixel.y; pixel.y = pixel.z; pixel.z = temp; }
+
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+    ui->initCheckBox(parentVar, "transpose XY", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 3);
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "transpose XZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 4);
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "transpose YZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 5);
+        return true;
+      default: return false;
+    }});
+  }
+}; //TransposeProjection
+
+class NewReverseProjection: public Projection { //Transformer
+  const char * name() {return "Reverse WIP";}
+  const char * tags() {return "💡";}
+
+  public:
+
+  void adjustXYZ(Leds &leds, Coord3D &pixel) {
+    
+    if (leds.reverseTranform == 0) return;
+
+    bool reverseX = leds.reverseTranform & (1 << 0); //mdl->getValue("reverse X");
+    bool reverseY = leds.reverseTranform & (1 << 1); //mdl->getValue("reverse Y");
+    bool reverseZ = leds.reverseTranform & (1 << 2); //mdl->getValue("reverse Z");
+
+    if (reverseX) pixel.x = leds.size.x - pixel.x - 1;
+    if (reverseY) pixel.y = leds.size.y - pixel.y - 1;
+    if (reverseZ) pixel.z = leds.size.z - pixel.z - 1;
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+    ui->initCheckBox(parentVar, "reverse X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 0);
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 1);
+        return true;
+      default: return false;
+    }});
+    ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+      case onChange:
+        leds.reverseTranform ^= (1 << 2);
+        return true;
+      default: return false;
+    }});
+  }
+}; //ReverseProjection
+
+
 // PRESETS 
 // Temp presets for testing
 // Not needed with modifiers implemented in UI
@@ -674,6 +759,104 @@ class DefaultModProjection: public Projection {
     tp.controls(leds, parentVar);
   }
 }; //DefaultModProjection
+
+//Experimental Projections Uses XYZ for reverse and transpose
+
+// class PinwheelModProjection: public Projection {
+//   const char * name() {return "Modified Exp Pinwheel";}
+//   const char * tags() {return "💫🏋️";}
+
+//   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+//     MirrorProjection mp;
+//     mp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     GroupingProjection gp;
+//     gp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     MultiplyProjection multp;
+//     multp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     PinwheelProjection pp;
+//     pp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//   }
+
+//   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+//     MirrorProjection mp;
+//     mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     GroupingProjection gp;
+//     gp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     MultiplyProjection multp;
+//     multp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     PinwheelProjection pp;
+//     pp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//   }
+
+//   void adjustXYZ(Leds &leds, Coord3D &pixel) {
+//     NewTransposeProjection tp;
+//     tp.adjustXYZ(leds, pixel);
+//     NewReverseProjection rp;
+//     rp.adjustXYZ(leds, pixel);
+//   }
+
+//   void controls(Leds &leds, JsonObject parentVar) {
+//     PinwheelProjection pp;
+//     pp.controls(leds, parentVar);
+//     MultiplyProjection multp;
+//     multp.controls(leds, parentVar);
+//     GroupingProjection gp;
+//     gp.controls(leds, parentVar);
+//     MirrorProjection mp;
+//     mp.controls(leds, parentVar);
+//     NewReverseProjection rp;
+//     rp.controls(leds, parentVar);
+//     NewTransposeProjection tp;
+//     tp.controls(leds, parentVar);
+//   }
+// }; //DefaultModProjection
+
+// class DefaultModProjection: public Projection {
+//   const char * name() {return "Modified Exp Default";}
+//   const char * tags() {return "💫🏋️";}
+
+//   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
+//     MirrorProjection mp;
+//     mp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     GroupingProjection gp;
+//     gp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     MultiplyProjection multp;
+//     multp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     DefaultProjection dp;
+//     dp.adjustSizeAndPixel(leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);    
+//   }
+
+//   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
+//     MirrorProjection mp;
+//     mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     GroupingProjection gp;
+//     gp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     MultiplyProjection multp;
+//     multp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//     DefaultProjection dp;
+//     dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
+//   }
+
+//   void adjustXYZ(Leds &leds, Coord3D &pixel) {
+//     NewTransposeProjection tp;
+//     tp.adjustXYZ(leds, pixel);
+//     NewReverseProjection rp;
+//     rp.adjustXYZ(leds, pixel);
+//   }
+
+//   void controls(Leds &leds, JsonObject parentVar) {
+//     MultiplyProjection multp;
+//     multp.controls(leds, parentVar);
+//     GroupingProjection gp;
+//     gp.controls(leds, parentVar);
+//     MirrorProjection mp;
+//     mp.controls(leds, parentVar);
+//     NewReverseProjection rp;
+//     rp.controls(leds, parentVar);
+//     NewTransposeProjection tp;
+//     tp.controls(leds, parentVar);
+//   }
+// }; //DefaultModProjection
 
 // LEGACY Remove or rework later. Hardcoded in LedFixture.cpp
 class DistanceFromPointProjection: public Projection {
