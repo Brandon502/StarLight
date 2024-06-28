@@ -112,8 +112,6 @@ void Fixture::projectAndMap() {
               mdl->getValueRowNr = rowNr; //run projection functions in the right rowNr context
 
               //using cached virtual class methods!
-              // Only call adjustSizeAndPixelCached once if leds->size = 0,0,0? Not sure if other projections will need to adjust multiple times.
-              // if (projection && leds->size == Coord3D({0,0,0})) 
               (projection->*leds->adjustSizeAndPixelCached)(*leds, sizeAdjusted, pixelAdjusted, midPosAdjusted);
               
               if (leds->size == Coord3D{0,0,0}) { // first

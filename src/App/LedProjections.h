@@ -28,7 +28,7 @@ class DefaultProjection: public Projection {
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
 
-    if (sizeAdjusted != Coord3D{0,0,0} && leds.size != Coord3D{0,0,0}) return;
+    if (leds.size != Coord3D{0,0,0}) return;
     ppf ("Default Projection %dD -> %dD Effect  Size: %d,%d,%d Pixel: %d,%d,%d ->", leds.projectionDimension, leds.effectDimension, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z);
     switch (leds.effectDimension) {
       case _1D: // effectDimension 1DxD
@@ -148,7 +148,7 @@ class PinwheelProjection: public Projection {
 
     int dx = pixelAdjusted.x - midPosAdjusted.x;
     int dy = pixelAdjusted.y - midPosAdjusted.y;
-    int swirlFactor = hypot(dy, dx) * abs(swirlVal); // 2D distance
+    int swirlFactor = swirlVal == 0 ? 0 : hypot(dy, dx) * abs(swirlVal); // Only calculate if swirlVal != 0
     int angle       = degrees(atan2(dy, dx)) + 180;  // 0 - 360
     
     if (swirlVal < 0) angle = 360 - angle; // Reverse Swirl
@@ -246,27 +246,26 @@ class MultiplyProjection: public Projection {
   public:
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
-    // Get the multiplication factors
+    // UI Variables
     Coord3D proMulti = mdl->getValue("proMulti");
-
-    // Ensure multiplication factors are not zero to avoid division by zero
-    proMulti = proMulti.maximum(Coord3D{1, 1, 1});
+    proMulti = proMulti.maximum(Coord3D{1, 1, 1}); // {1, 1, 1} is the minimum value
+    if (proMulti == Coord3D{1, 1, 1}) return;
+    
+    bool mirror = mdl->getValue("mirror");
 
     // ppf ("Multiply %d,%d,%d Before Size: %d,%d,%d Pixel: %d,%d,%d ->", proMulti.x, proMulti.y, proMulti.z, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z);
+   
     sizeAdjusted = (sizeAdjusted + proMulti - 1) / proMulti; // round up
-
     midPosAdjusted /= proMulti;
 
-    Coord3D mirrors = pixelAdjusted / sizeAdjusted; //place the pixel in the right quadrant
-
-    pixelAdjusted = pixelAdjusted % sizeAdjusted;
-
-    bool mirror = mdl->getValue("mirror");
     if (mirror) {
+      Coord3D mirrors = pixelAdjusted / sizeAdjusted; //place the pixel in the right quadrant
+      pixelAdjusted = pixelAdjusted % sizeAdjusted;
       if (mirrors.x %2 != 0) pixelAdjusted.x = sizeAdjusted.x - 1 - pixelAdjusted.x;
       if (mirrors.y %2 != 0) pixelAdjusted.y = sizeAdjusted.y - 1 - pixelAdjusted.y;
       if (mirrors.z %2 != 0) pixelAdjusted.z = sizeAdjusted.z - 1 - pixelAdjusted.z;
     }
+    else pixelAdjusted = pixelAdjusted % sizeAdjusted;
 
     // ppf (" Size: %d,%d,%d Pixel: %d,%d,%d Mirrors: %d,%d,%d\n", sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mirrors.x, mirrors.y, mirrors.z);
   }
@@ -398,6 +397,8 @@ class GroupingProjection: public Projection {
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
     Coord3D grouping = mdl->getValue("Grouping");
+    grouping = grouping.maximum(Coord3D{1, 1, 1}); // {1, 1, 1} is the minimum value
+    if (grouping == Coord3D{1, 1, 1}) return;
 
     pixelAdjusted.x = pixelAdjusted.x / grouping.x;
     pixelAdjusted.y = pixelAdjusted.y / grouping.y;
@@ -682,16 +683,6 @@ class PinwheelModProjection: public Projection {
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
-    TransposeProjection tp;
-    tp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    ReverseProjection rp;
-    rp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    MirrorProjection mp;
-    mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    GroupingProjection gp;
-    gp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    MultiplyProjection multp;
-    multp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     PinwheelProjection pp;
     pp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
@@ -732,16 +723,6 @@ class DefaultModProjection: public Projection {
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
-    TransposeProjection tp;
-    tp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    ReverseProjection rp;
-    rp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    MirrorProjection mp;
-    mp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    GroupingProjection gp;
-    gp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
-    MultiplyProjection multp;
-    multp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
     DefaultProjection dp;
     dp.adjustMapped(leds, mapped, sizeAdjusted, pixelAdjusted, midPosAdjusted);
   }
