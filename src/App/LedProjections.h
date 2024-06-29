@@ -328,24 +328,28 @@ class ReverseProjection: public Projection { // Maybe transformer?
         return true;
       default: return false;
     }});
-    ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.reverseTransform = mdl->getValue("reverse Y") ? leds.reverseTransform | (1 << 1) : leds.reverseTransform & ~(1 << 1);
-        // leds.reverseTransform ^= (1 << 1);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
-    ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.reverseTransform = mdl->getValue("reverse Z") ? leds.reverseTransform | (1 << 2) : leds.reverseTransform & ~(1 << 2);
-        // leds.reverseTransform ^= (1 << 2);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
+    if (leds.projectionDimension >= _2D) {
+      ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.reverseTransform = mdl->getValue("reverse Y") ? leds.reverseTransform | (1 << 1) : leds.reverseTransform & ~(1 << 1);
+          // leds.reverseTransform ^= (1 << 1);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
+    if (leds.projectionDimension == _3D) {
+      ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.reverseTransform = mdl->getValue("reverse Z") ? leds.reverseTransform | (1 << 2) : leds.reverseTransform & ~(1 << 2);
+          // leds.reverseTransform ^= (1 << 2);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
   }
 }; //ReverseProjection
 
@@ -389,24 +393,29 @@ class MirrorProjection: public Projection {
         return true;
       default: return false;
     }});
-    ui->initCheckBox(parentVar, "mirror Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.mirrorTransform = mdl->getValue("mirror Y") ? leds.mirrorTransform | (1 << 1) : leds.mirrorTransform & ~(1 << 1);
-        // leds.mirrorTransform ^= (1 << 1);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
-    ui->initCheckBox(parentVar, "mirror Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.mirrorTransform = mdl->getValue("mirror Z") ? leds.mirrorTransform | (1 << 2) : leds.mirrorTransform & ~(1 << 2);
-        // leds.mirrorTransform ^= (1 << 2);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
+    if (leds.projectionDimension >= _2D) {
+
+      ui->initCheckBox(parentVar, "mirror Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.mirrorTransform = mdl->getValue("mirror Y") ? leds.mirrorTransform | (1 << 1) : leds.mirrorTransform & ~(1 << 1);
+          // leds.mirrorTransform ^= (1 << 1);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
+    if (leds.projectionDimension == _3D) {
+      ui->initCheckBox(parentVar, "mirror Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.mirrorTransform = mdl->getValue("mirror Z") ? leds.mirrorTransform | (1 << 2) : leds.mirrorTransform & ~(1 << 2);
+          // leds.mirrorTransform ^= (1 << 2);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
   }
 }; //MirrorProjection
 
@@ -484,24 +493,26 @@ class TransposeProjection: public Projection { // Maybe transformer?
         return true;
       default: return false;
     }});
-    ui->initCheckBox(parentVar, "transpose XZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.reverseTransform = mdl->getValue("transpose XZ") ? leds.reverseTransform | (1 << 4) : leds.reverseTransform & ~(1 << 4);
-        // leds.reverseTransform ^= (1 << 4);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
-    ui->initCheckBox(parentVar, "transpose YZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onChange:
-        leds.reverseTransform = mdl->getValue("transpose YZ") ? leds.reverseTransform | (1 << 5) : leds.reverseTransform & ~(1 << 5);
-        // leds.reverseTransform ^= (1 << 5);
-        leds.fixture->listOfLeds[rowNr]->doMap = true;
-        leds.fixture->doMap = true;
-        return true;
-      default: return false;
-    }});
+    if (leds.projectionDimension == _3D) {
+      ui->initCheckBox(parentVar, "transpose XZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.reverseTransform = mdl->getValue("transpose XZ") ? leds.reverseTransform | (1 << 4) : leds.reverseTransform & ~(1 << 4);
+          // leds.reverseTransform ^= (1 << 4);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+      ui->initCheckBox(parentVar, "transpose YZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+        case onChange:
+          leds.reverseTransform = mdl->getValue("transpose YZ") ? leds.reverseTransform | (1 << 5) : leds.reverseTransform & ~(1 << 5);
+          // leds.reverseTransform ^= (1 << 5);
+          leds.fixture->listOfLeds[rowNr]->doMap = true;
+          leds.fixture->doMap = true;
+          return true;
+        default: return false;
+      }});
+    }
   }
 }; //TransposeProjection
 
