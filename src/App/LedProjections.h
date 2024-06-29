@@ -32,8 +32,9 @@ class DefaultProjection: public Projection {
     ppf ("Default Projection %dD -> %dD Effect  Size: %d,%d,%d Pixel: %d,%d,%d ->", leds.projectionDimension, leds.effectDimension, sizeAdjusted.x, sizeAdjusted.y, sizeAdjusted.z, pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z);
     switch (leds.effectDimension) {
       case _1D: // effectDimension 1DxD
-          sizeAdjusted.x = sqrt(sq(max(sizeAdjusted.x - midPosAdjusted.x, midPosAdjusted.x)) + sq(max(sizeAdjusted.y - midPosAdjusted.y, midPosAdjusted.y))) + 1;
-          // sizeAdjusted.x = max(midPosAdjusted.distance(sizeAdjusted), midPosAdjusted.distance(Coord3D{0,0,0})) + 1;
+          sizeAdjusted.x = sqrt(sq(max(sizeAdjusted.x - midPosAdjusted.x, midPosAdjusted.x)) + 
+                                sq(max(sizeAdjusted.y - midPosAdjusted.y, midPosAdjusted.y)) + 
+                                sq(max(sizeAdjusted.z - midPosAdjusted.z, midPosAdjusted.z))) + 1;
           sizeAdjusted.y = 1;
           sizeAdjusted.z = 1;
           break;
@@ -140,11 +141,11 @@ class PinwheelProjection: public Projection {
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // UI Variables
-    int swirlVal   = mdl->getValue("swirlVal");
-    bool reverse   = mdl->getValue("reverse");
-    int zTwist     = mdl->getValue("zTwist");
-    int angleRange = max(1, int(mdl->getValue("angleRange")));
-    float petals   = max(1, int(mdl->getValue("Petals")));
+    int swirlVal   = leds.swirlVal; //mdl->getValue("swirlVal");
+    bool reverse   = leds.reverseTransform & (1 << 6);  //mdl->getValue("reverse");
+    int zTwist     = leds.zTwist; //mdl->getValue("zTwist");
+    int angleRange = leds.angleRange; //max(1, int(mdl->getValue("angleRange")));
+    float petals   = leds.petals; //max(1, int(mdl->getValue("Petals")));
 
     int dx = pixelAdjusted.x - midPosAdjusted.x;
     int dy = pixelAdjusted.y - midPosAdjusted.y;
@@ -168,11 +169,9 @@ class PinwheelProjection: public Projection {
     // ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
   }
   void controls(Leds &leds, JsonObject parentVar) {
-    ui->initSlider(parentVar, "swirlVal", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-      case onUI:
-        ui->setLabel(var, "Swirl");
-        return true;
+    ui->initSlider(parentVar, "Swirl", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.swirlVal = mdl->getValue("Swirl");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -181,6 +180,7 @@ class PinwheelProjection: public Projection {
     // use reverse class when implemented
     ui->initCheckBox(parentVar, "reverse", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("reverse") ? leds.reverseTransform | (1 << 6) : leds.reverseTransform & ~(1 << 6);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -189,10 +189,8 @@ class PinwheelProjection: public Projection {
     // Testing zTwist range -42 to 42 arbitrary values for testing. Hide if not 3D fixture. Select pinwheel while using 3D fixture.
     if (leds.projectionDimension == _3D) {
       ui->initSlider(parentVar, "zTwist", 0, -42, 42, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
-        case onUI:
-          ui->setLabel(var, "zTwist");
-          return true;
         case onChange:
+          leds.zTwist = mdl->getValue("zTwist");
           leds.fixture->listOfLeds[rowNr]->doMap = true;
           leds.fixture->doMap = true;
           return true;
@@ -202,6 +200,7 @@ class PinwheelProjection: public Projection {
     // Angle range 0 - angleRange. For testing purposes
     ui->initNumber(parentVar, "angleRange", 360, 1, 720, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.angleRange = mdl->getValue("angleRange");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -210,6 +209,7 @@ class PinwheelProjection: public Projection {
     // Naming petals, arms, blades, rays? Controls virtual strip length.
     ui->initNumber(parentVar, "Petals", 360, 1, 360, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.petals = mdl->getValue("Petals");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -247,7 +247,7 @@ class MultiplyProjection: public Projection {
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
-    Coord3D proMulti = mdl->getValue("proMulti");
+    Coord3D proMulti = leds.multiplySize; //mdl->getValue("proMulti");
     proMulti = proMulti.maximum(Coord3D{1, 1, 1}); // {1, 1, 1} is the minimum value
     if (proMulti == Coord3D{1, 1, 1}) return;
     
@@ -271,7 +271,7 @@ class MultiplyProjection: public Projection {
   }
 
   void controls(Leds &leds, JsonObject parentVar) {
-    ui->initCoord3D(parentVar, "proMulti", {1,1,1}, 0, 10, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initCoord3D(parentVar, "proMulti", leds.multiplySize, 0, 10, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onUI:
         ui->setLabel(var, "MultiplyX");
         return true;
@@ -279,6 +279,8 @@ class MultiplyProjection: public Projection {
         ui->initCheckBox(var, "mirror", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
           case onChange:
             if (rowNr < leds.fixture->listOfLeds.size()) {
+              leds.mirrorTransform = mdl->getValue("mirror") ? leds.mirrorTransform | (1 << 3) : leds.mirrorTransform & ~(1 << 3);
+              // leds.mirrorTransform ^= (1 << 3);
               leds.fixture->listOfLeds[rowNr]->doMap = true;
               leds.fixture->doMap = true;
             }
@@ -286,6 +288,7 @@ class MultiplyProjection: public Projection {
           default: return false;
         }});
         if (rowNr < leds.fixture->listOfLeds.size()) {
+          leds.multiplySize = mdl->getValue("proMulti");
           leds.fixture->listOfLeds[rowNr]->doMap = true;
           leds.fixture->doMap = true;
         }
@@ -303,9 +306,12 @@ class ReverseProjection: public Projection { // Maybe transformer?
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
-    bool reverseX = mdl->getValue("reverse X");
-    bool reverseY = mdl->getValue("reverse Y");
-    bool reverseZ = mdl->getValue("reverse Z");
+    bool reverseX = leds.reverseTransform & (1 << 0);
+    bool reverseY = leds.reverseTransform & (1 << 1);
+    bool reverseZ = leds.reverseTransform & (1 << 2);
+    // bool reverseX = mdl->getValue("reverse X");
+    // bool reverseY = mdl->getValue("reverse Y");
+    // bool reverseZ = mdl->getValue("reverse Z");
 
     if (reverseX) pixelAdjusted.x = sizeAdjusted.x - pixelAdjusted.x - 1;
     if (reverseY) pixelAdjusted.y = sizeAdjusted.y - pixelAdjusted.y - 1;
@@ -315,6 +321,8 @@ class ReverseProjection: public Projection { // Maybe transformer?
   void controls(Leds &leds, JsonObject parentVar) {
     ui->initCheckBox(parentVar, "reverse X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("reverse X") ? leds.reverseTransform | (1 << 0) : leds.reverseTransform & ~(1 << 0);
+        // leds.reverseTransform ^= (1 << 0);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -322,6 +330,8 @@ class ReverseProjection: public Projection { // Maybe transformer?
     }});
     ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("reverse Y") ? leds.reverseTransform | (1 << 1) : leds.reverseTransform & ~(1 << 1);
+        // leds.reverseTransform ^= (1 << 1);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -329,6 +339,8 @@ class ReverseProjection: public Projection { // Maybe transformer?
     }});
     ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("reverse Z") ? leds.reverseTransform | (1 << 2) : leds.reverseTransform & ~(1 << 2);
+        // leds.reverseTransform ^= (1 << 2);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -345,9 +357,13 @@ class MirrorProjection: public Projection {
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
-    bool mirrorX = mdl->getValue("mirror X");
-    bool mirrorY = mdl->getValue("mirror Y");
-    bool mirrorZ = mdl->getValue("mirror Z");
+    bool mirrorX = leds.mirrorTransform & (1 << 0);
+    bool mirrorY = leds.mirrorTransform & (1 << 1);
+    bool mirrorZ = leds.mirrorTransform & (1 << 2);
+
+    // bool mirrorX = mdl->getValue("mirror X");
+    // bool mirrorY = mdl->getValue("mirror Y");
+    // bool mirrorZ = mdl->getValue("mirror Z");
 
     if (mirrorX) {
       if (pixelAdjusted.x >= sizeAdjusted.x / 2) pixelAdjusted.x = sizeAdjusted.x - 1 - pixelAdjusted.x;
@@ -366,6 +382,8 @@ class MirrorProjection: public Projection {
   void controls(Leds &leds, JsonObject parentVar) {
     ui->initCheckBox(parentVar, "mirror X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.mirrorTransform = mdl->getValue("mirror X") ? leds.mirrorTransform | (1 << 0) : leds.mirrorTransform & ~(1 << 0);
+        // leds.mirrorTransform ^= (1 << 0);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -373,6 +391,8 @@ class MirrorProjection: public Projection {
     }});
     ui->initCheckBox(parentVar, "mirror Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.mirrorTransform = mdl->getValue("mirror Y") ? leds.mirrorTransform | (1 << 1) : leds.mirrorTransform & ~(1 << 1);
+        // leds.mirrorTransform ^= (1 << 1);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -380,6 +400,8 @@ class MirrorProjection: public Projection {
     }});
     ui->initCheckBox(parentVar, "mirror Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.mirrorTransform = mdl->getValue("mirror Z") ? leds.mirrorTransform | (1 << 2) : leds.mirrorTransform & ~(1 << 2);
+        // leds.mirrorTransform ^= (1 << 2);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -396,7 +418,7 @@ class GroupingProjection: public Projection {
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
-    Coord3D grouping = mdl->getValue("Grouping");
+    Coord3D grouping = leds.groupSize; //mdl->getValue("Grouping");
     grouping = grouping.maximum(Coord3D{1, 1, 1}); // {1, 1, 1} is the minimum value
     if (grouping == Coord3D{1, 1, 1}) return;
 
@@ -410,8 +432,9 @@ class GroupingProjection: public Projection {
   }
 
   void controls(Leds &leds, JsonObject parentVar) {
-    ui->initCoord3D(parentVar, "Grouping", {1,1,1}, 0, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initCoord3D(parentVar, "Grouping", leds.groupSize, 0, 100, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.groupSize = mdl->getValue("Grouping");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -438,9 +461,13 @@ class TransposeProjection: public Projection { // Maybe transformer?
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
     // UI Variables
-    bool transposeXY = mdl->getValue("transpose XY");
-    bool transposeXZ = mdl->getValue("transpose XZ");
-    bool transposeYZ = mdl->getValue("transpose YZ");
+    bool transposeXY = leds.reverseTransform & (1 << 3);
+    bool transposeXZ = leds.reverseTransform & (1 << 4);
+    bool transposeYZ = leds.reverseTransform & (1 << 5);
+
+    // bool transposeXY = mdl->getValue("transpose XY");
+    // bool transposeXZ = mdl->getValue("transpose XZ");
+    // bool transposeYZ = mdl->getValue("transpose YZ");
 
     if (transposeXY) { int temp = pixelAdjusted.x; pixelAdjusted.x = pixelAdjusted.y; pixelAdjusted.y = temp; }
     if (transposeXZ) { int temp = pixelAdjusted.x; pixelAdjusted.x = pixelAdjusted.z; pixelAdjusted.z = temp; }
@@ -450,6 +477,8 @@ class TransposeProjection: public Projection { // Maybe transformer?
   void controls(Leds &leds, JsonObject parentVar) {
     ui->initCheckBox(parentVar, "transpose XY", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("transpose XY") ? leds.reverseTransform | (1 << 3) : leds.reverseTransform & ~(1 << 3);
+        // leds.reverseTransform ^= (1 << 3);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -457,6 +486,8 @@ class TransposeProjection: public Projection { // Maybe transformer?
     }});
     ui->initCheckBox(parentVar, "transpose XZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("transpose XZ") ? leds.reverseTransform | (1 << 4) : leds.reverseTransform & ~(1 << 4);
+        // leds.reverseTransform ^= (1 << 4);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -464,6 +495,8 @@ class TransposeProjection: public Projection { // Maybe transformer?
     }});
     ui->initCheckBox(parentVar, "transpose YZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        leds.reverseTransform = mdl->getValue("transpose YZ") ? leds.reverseTransform | (1 << 5) : leds.reverseTransform & ~(1 << 5);
+        // leds.reverseTransform ^= (1 << 5);
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -554,15 +587,15 @@ class NewTransposeProjection: public Projection { // Transformer
 
   void adjustXYZ(Leds &leds, Coord3D &pixel) {
 
-    if (leds.reverseTranform == 0) return;
+    if (leds.reverseTransform == 0) return;
 
-    bool transposeXY = leds.reverseTranform & (1 << 3); //mdl->getValue("transpose XY")
+    bool transposeXY = leds.reverseTransform & (1 << 3); //mdl->getValue("transpose XY")
     if (transposeXY) { int temp = pixel.x; pixel.x = pixel.y; pixel.y = temp; }
 
     if (leds.projectionDimension < _3D) return;
-    bool transposeXZ = leds.reverseTranform & (1 << 4); //mdl->getValue("transpose XZ");
+    bool transposeXZ = leds.reverseTransform & (1 << 4); //mdl->getValue("transpose XZ");
     if (transposeXZ) { int temp = pixel.x; pixel.x = pixel.z; pixel.z = temp; }
-    bool transposeYZ = leds.reverseTranform & (1 << 5); //mdl->getValue("transpose YZ");
+    bool transposeYZ = leds.reverseTransform & (1 << 5); //mdl->getValue("transpose YZ");
     if (transposeYZ) { int temp = pixel.y; pixel.y = pixel.z; pixel.z = temp; }
 
   }
@@ -570,19 +603,19 @@ class NewTransposeProjection: public Projection { // Transformer
   void controls(Leds &leds, JsonObject parentVar) {
     ui->initCheckBox(parentVar, "transpose XY", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 3);
+        leds.reverseTransform ^= (1 << 3);
         return true;
       default: return false;
     }});
     ui->initCheckBox(parentVar, "transpose XZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 4);
+        leds.reverseTransform ^= (1 << 4);
         return true;
       default: return false;
     }});
     ui->initCheckBox(parentVar, "transpose YZ", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 5);
+        leds.reverseTransform ^= (1 << 5);
         return true;
       default: return false;
     }});
@@ -597,11 +630,11 @@ class NewReverseProjection: public Projection { //Transformer
 
   void adjustXYZ(Leds &leds, Coord3D &pixel) {
     
-    if (leds.reverseTranform == 0) return;
+    if (leds.reverseTransform == 0) return;
 
-    bool reverseX = leds.reverseTranform & (1 << 0); //mdl->getValue("reverse X");
-    bool reverseY = leds.reverseTranform & (1 << 1); //mdl->getValue("reverse Y");
-    bool reverseZ = leds.reverseTranform & (1 << 2); //mdl->getValue("reverse Z");
+    bool reverseX = leds.reverseTransform & (1 << 0); //mdl->getValue("reverse X");
+    bool reverseY = leds.reverseTransform & (1 << 1); //mdl->getValue("reverse Y");
+    bool reverseZ = leds.reverseTransform & (1 << 2); //mdl->getValue("reverse Z");
 
     if (reverseX) pixel.x = leds.size.x - pixel.x - 1;
     if (reverseY) pixel.y = leds.size.y - pixel.y - 1;
@@ -611,19 +644,19 @@ class NewReverseProjection: public Projection { //Transformer
   void controls(Leds &leds, JsonObject parentVar) {
     ui->initCheckBox(parentVar, "reverse X", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 0);
+        leds.reverseTransform ^= (1 << 0);
         return true;
       default: return false;
     }});
     ui->initCheckBox(parentVar, "reverse Y", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 1);
+        leds.reverseTransform ^= (1 << 1);
         return true;
       default: return false;
     }});
     ui->initCheckBox(parentVar, "reverse Z", false, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.reverseTranform ^= (1 << 2);
+        leds.reverseTransform ^= (1 << 2);
         return true;
       default: return false;
     }});

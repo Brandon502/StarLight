@@ -290,13 +290,31 @@ public:
   unsigned8 proPanSpeed = 128;
   unsigned8 proRollSpeed = 128;
 
-  byte reverseTranform = 0; 
+  // Convert to shared data
+  // All modifiers variables
+  Coord3D groupSize = {1,1,1};
+  Coord3D multiplySize = {1,1,1};
+  byte reverseTransform = 0; 
   // bit 0: reverse x
   // bit 1: reverse y
   // bit 2: reverse z
   // bit 3: transform XY
   // bit 4: transform XZ
   // bit 5: transform YZ
+  // bit 6: pinwheel reverse
+
+  byte mirrorTransform = 0;
+  // bit 0: mirror X
+  // bit 1: mirror Y
+  // bit 2: mirror Z
+  // bit 3: multiply mirror
+
+  // Pinwheel Convert to shared data
+  int swirlVal = 0;
+  int zTwist = 0;
+  int angleRange = 360;
+  int petals = 360;
+
 
   SharedData sharedData;
 
@@ -334,7 +352,7 @@ public:
     ppf("Leds destructor\n");
     fadeToBlackBy(100);
     doMap = true; // so loop is not running while deleting
-    reverseTranform = 0;
+    reverseTransform = 0;
     for (PhysMap &map:mappingTable) {
       if (map.isMultipleIndexes()) {
         map.indexes->clear();

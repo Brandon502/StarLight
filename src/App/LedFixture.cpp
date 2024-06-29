@@ -29,7 +29,8 @@ void Fixture::projectAndMap() {
     for (Leds *leds: listOfLeds) {
       if (leds->doMap) {
         leds->fill_solid(CRGB::Black, true); //no blend
-        leds->reverseTranform = 0;
+        // leds->reverseTransform = 0;
+        // leds->mirrorTransform = 0;
 
         ppf("projectAndMap clear leds[%d] fx:%d pro:%d\n", rowNr, leds->fx, leds->projectionNr);
         leds->size = Coord3D{0,0,0};
