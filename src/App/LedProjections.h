@@ -134,18 +134,29 @@ class PinwheelProjection: public Projection {
   public:
 
   void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {
-    sizeAdjusted.x = mdl->getValue("Petals");
-    sizeAdjusted.y = 1;
-    sizeAdjusted.z = 1;
+    if (leds.size != Coord3D{0,0,0}) return;
+    if (leds.projectionDimension == _2D && leds.effectDimension == _2D) {
+      sizeAdjusted.y = sqrt(sq(max(sizeAdjusted.x - midPosAdjusted.x, midPosAdjusted.x)) + 
+                            sq(max(sizeAdjusted.y - midPosAdjusted.y, midPosAdjusted.y))) + 1; // Adjust y before x
+      sizeAdjusted.x = min(36, leds.petals);
+      sizeAdjusted.z = 1;
+    }
+    else {
+      sizeAdjusted.x = leds.petals;
+      sizeAdjusted.y = 1;
+      sizeAdjusted.z = 1;
+    }
+
   }
 
   void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {
     // UI Variables
-    int swirlVal   = leds.swirlVal; //mdl->getValue("swirlVal");
+    int swirlVal   = leds.swirlVal; //mdl->getValue("swirl");
     bool reverse   = leds.reverseTransform & (1 << 6);  //mdl->getValue("reverse");
     int zTwist     = leds.zTwist; //mdl->getValue("zTwist");
     int angleRange = leds.angleRange; //max(1, int(mdl->getValue("angleRange")));
-    float petals   = leds.petals; //max(1, int(mdl->getValue("Petals")));
+    float petals   = leds.petals; //max(1, int(mdl->getValue("petals")));
+    if (leds.effectDimension == _2D && leds.projectionDimension == _2D) petals = min(36, leds.petals);
 
     int dx = pixelAdjusted.x - midPosAdjusted.x;
     int dy = pixelAdjusted.y - midPosAdjusted.y;
@@ -163,15 +174,18 @@ class PinwheelProjection: public Projection {
 
     mapped.x = value;
     mapped.y = 0;
+    if (leds.effectDimension == _2D && leds.projectionDimension == _2D) {
+      mapped.y = int(sqrt(sq(dx) + sq(dy)));
+    }
     mapped.z = 0;
 
     // if (pixelAdjusted.x == 0 && pixelAdjusted.y == 0 && pixelAdjusted.z == 0) ppf("Pinwheel  Center: (%d, %d) SwirlVal: %d angleRange: %d Petals: %f zTwist: %d\n", midPosAdjusted.x, midPosAdjusted.y, swirlVal, angleRange, petals, zTwist);
     // ppf("pixelAdjusted %d,%d,%d -> %d,%d,%d angle %d\n", pixelAdjusted.x, pixelAdjusted.y, pixelAdjusted.z, mapped.x, mapped.y, mapped.z, angle);
   }
   void controls(Leds &leds, JsonObject parentVar) {
-    ui->initSlider(parentVar, "Swirl", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initSlider(parentVar, "swirl", 0, -30, 30, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.swirlVal = mdl->getValue("Swirl");
+        leds.swirlVal = mdl->getValue("swirl");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
@@ -200,6 +214,7 @@ class PinwheelProjection: public Projection {
     // Angle range 0 - angleRange. For testing purposes
     ui->initNumber(parentVar, "angleRange", 360, 1, 720, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
+        if (int(mdl->getValue("angleRange")) < 1) return true;
         leds.angleRange = mdl->getValue("angleRange");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
@@ -207,9 +222,10 @@ class PinwheelProjection: public Projection {
       default: return false;
     }});
     // Naming petals, arms, blades, rays? Controls virtual strip length.
-    ui->initNumber(parentVar, "Petals", 360, 1, 360, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
+    ui->initNumber(parentVar, "petals", 360, 1, 360, false, [&leds](JsonObject var, unsigned8 rowNr, unsigned8 funType) { switch (funType) { //varFun
       case onChange:
-        leds.petals = mdl->getValue("Petals");
+        if (int(mdl->getValue("petals")) < 1) return true;
+        leds.petals = mdl->getValue("petals");
         leds.fixture->listOfLeds[rowNr]->doMap = true;
         leds.fixture->doMap = true;
         return true;
