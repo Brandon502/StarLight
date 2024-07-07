@@ -103,6 +103,8 @@ public:
     fixture.projections.push_back(new NoneProjection);
     fixture.projections.push_back(new DefaultProjection);
     fixture.projections.push_back(new PinwheelProjection);
+    fixture.projections.push_back(new DefaultModifiedProjection);
+    fixture.projections.push_back(new PinwheelModifiedProjection);
     fixture.projections.push_back(new MultiplyProjection);
     fixture.projections.push_back(new TiltPanRollProjection);
     fixture.projections.push_back(new DistanceFromPointProjection);
@@ -254,7 +256,7 @@ public:
             leds->adjustXYZCached = &Projection::adjustXYZ;
 
             mdl->varPreDetails(var, rowNr); //set all positive var N orders to negative
-            projection->controls(*leds, var);
+            projection->controls(*leds, var, true);
             mdl->varPostDetails(var, rowNr);
           }
           // ppf("onChange pro[%d] <- %d (%d)\n", rowNr, proValue, fixture.listOfLeds.size());

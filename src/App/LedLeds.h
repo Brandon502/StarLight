@@ -35,6 +35,8 @@ enum ProjectionsE
   p_None,
   p_Default,
   p_Pinwheel,
+  p_DefaultModified,
+  p_PinwheelModified,
   p_Multiply,
   p_TiltPanRoll,
   p_DistanceFromPoint,
@@ -272,8 +274,8 @@ public:
   unsigned8 projectionNr = -1;
 
   //using cached virtual class methods! 4 bytes each - thats for now the price we pay for speed
-  void (Projection::*adjustSizeAndPixelCached)(Leds &, Coord3D &, Coord3D &, Coord3D &) = nullptr;
-  void (Projection::*adjustMappedCached)(Leds &, Coord3D &, Coord3D, Coord3D, Coord3D) = nullptr;
+  void (Projection::*adjustSizeAndPixelCached)(Leds &, Coord3D &, Coord3D &, Coord3D &, bool) = nullptr;
+  void (Projection::*adjustMappedCached)(Leds &, Coord3D &, Coord3D, Coord3D, Coord3D, bool) = nullptr;
   void (Projection::*adjustXYZCached)(Leds &, Coord3D &) = nullptr;
 
   unsigned8 effectDimension = -1;

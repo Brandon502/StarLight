@@ -30,13 +30,13 @@ public:
   virtual const char * tags() {return "";}
   // virtual uint8_t dim() {return _1D;};
 
-  virtual void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted) {}
+  virtual void adjustSizeAndPixel(Leds &leds, Coord3D &sizeAdjusted, Coord3D &pixelAdjusted, Coord3D &midPosAdjusted, bool begin) {}
 
-  virtual void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted) {}
+  virtual void adjustMapped(Leds &leds, Coord3D &mapped, Coord3D sizeAdjusted, Coord3D pixelAdjusted, Coord3D midPosAdjusted, bool begin) {}
 
   virtual void adjustXYZ(Leds &leds, Coord3D &pixel) {}
   
-  virtual void controls(Leds &leds, JsonObject parentVar) {}
+  virtual void controls(Leds &leds, JsonObject parentVar, bool reset) {}
 
 };
 
