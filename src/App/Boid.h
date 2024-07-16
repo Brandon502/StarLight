@@ -116,16 +116,17 @@ class Boid {
         PVector alignmentForce = PVector(0, 0);
         PVector cohesionForce = PVector(0, 0);
         int separationCount = 0;
-        int alignCount = 0;
-        int cohesionCount = 0;
+        int alignCohesionCount = 0;
 
         for (int i = 0; i < boidCount; i++) {
             Boid other = boids[i];
             if (!other.enabled) continue;
             float distance = location.dist(other.location);
 
+            if (distance <= 0) continue;
+
             // Separate
-            if (distance > 0 && distance < desiredseparation) {
+            if (distance < desiredseparation) {
                 PVector diff = location - other.location;
                 diff.normalize();
                 diff /= distance; // Weight by distance
@@ -133,16 +134,11 @@ class Boid {
                 separationCount++;
             }
 
-            // Align
-            if (distance > 0 && distance < neighbordist) {
+            // Align and Cohesion
+            if (distance < neighbordist) {
                 alignmentForce += other.velocity;
-                alignCount++;
-            }
-
-            // Cohesion
-            if (distance > 0 && distance < neighbordist) {
                 cohesionForce += other.location;
-                cohesionCount++;
+                alignCohesionCount++;
             }
         }
 
@@ -155,21 +151,18 @@ class Boid {
         separationForce -= velocity;
         separationForce.limit(maxforce);
 
-        if (alignCount > 0) {
-            alignmentForce /= (float)alignCount;
+        if (alignCohesionCount > 0) {
+            alignmentForce /= (float)alignCohesionCount;
             alignmentForce.normalize();
             alignmentForce *= maxspeed;
             alignmentForce -= velocity;
             alignmentForce.limit(maxforce);
-        }
-
-        if (cohesionCount > 0) {
-            cohesionForce /= (float)cohesionCount;
+            cohesionForce /= (float)alignCohesionCount;
             cohesionForce = seek(cohesionForce);            
         }
 
         // Apply the forces
-        applyForce(separationForce*1.5);
+        applyForce(separationForce * 1.5);
         applyForce(alignmentForce);
         applyForce(cohesionForce);
     }

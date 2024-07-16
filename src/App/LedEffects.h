@@ -2232,50 +2232,52 @@ class ParticleTest: public Effect {
   }
 };
 
-class Flock: public Effect {
+class Flock: public Effect { // Based on Flock by Jason Coon https://github.com/pixelmatix/aurora
   const char * name() {return "Flock";}
   unsigned8     dim() {return _2D;}
-  const char * tags() {return "💫";}
+  const char * tags() {return "💫🧭";}
 
   void loop(Leds &leds) {
     // UI Variables
+    bool   *setup = leds.effectData.readWrite<bool>();
     uint8_t speed = leds.effectData.read<uint8_t>(); // Updates per second
-    uint8_t boidCount = leds.effectData.read<uint8_t>();
-    bool predatorPresent = leds.effectData.read<bool>();
+    uint8_t preyCount     = leds.effectData.read<uint8_t>();
+    uint8_t predatorCount = leds.effectData.read<uint8_t>();
     #ifdef STARBASE_USERMOD_MPU6050
-      bool gyroPredator            = leds.effectData.read<bool>();
+      bool gyroPredator = leds.effectData.read<bool>();
     #else
       bool gyroPredator = false;
     #endif
-    bool efficent = leds.effectData.read<bool>();
+    bool preyWrap     = leds.effectData.read<bool>();
+    bool predatorWrap = leds.effectData.read<bool>();
+    bool efficient    = leds.effectData.read<bool>();
 
     // Effect Variables
     unsigned long *step  = leds.effectData.readWrite<unsigned long>();
-    byte *setup          = leds.effectData.readWrite<byte>();
-    Boid *boids          = leds.effectData.readWrite<Boid>(255);
-    Boid *predator       = leds.effectData.readWrite<Boid>();
-    int *prevBoidCount   = leds.effectData.readWrite<int>();
+    Boid *prey           = leds.effectData.readWrite<Boid>(120); // Hardcoded value same as slider max
+    Boid *predators      = leds.effectData.readWrite<Boid>(5); // Hardcoded value same as slider max
 
-    if (*setup != 123 || *prevBoidCount != boidCount) {
-      *setup = 123;
-      *prevBoidCount = boidCount;
+    if (*setup) {
+      ppf ("Setting Up Flock\n");
+      *setup = false;
       leds.fill_solid(CRGB::Black, true);
 
-      for (int i = 0; i < boidCount; i++) {
-        boids[i] = Boid(leds.size.x / 2, leds.size.y / 2);
-        boids[i].maxspeed = 0.380;
-        boids[i].maxforce = 0.015;
-        boids[i].colorIndex = random8();
+      for (int i = 0; i < 120; i++) { // Initialize all prey. Hardcoded value same as slider max
+        prey[i] = Boid(leds.size.x / 2, leds.size.y / 2);
+        prey[i].maxspeed = 0.380;
+        prey[i].maxforce = 0.015;
+        prey[i].colorIndex = random8();
       }
 
-      predatorPresent = true;
-      predator->location = PVector(0, 0);
-      predator->maxspeed = 0.385;
-      predator->maxforce = 0.020;
-      predator->neighbordist = 16.0;
-      predator->desiredseparation = 0.0;
-      
+      for (int i = 0; i < 5; i++) { // Initialize all predators. Hardcoded value same as slider max
+        predators[i].location = PVector(random8(leds.size.x), random8(leds.size.y));
+        predators[i].maxspeed = Boid::mapfloat(random8(), 0, 255, 0.37, 0.385); //0.385;
+        predators[i].maxforce = Boid::mapfloat(random8(), 0, 255, 0.01, 0.02);  //0.020;
+        predators[i].neighbordist = random8(10, 16); //16.0;
+        predators[i].desiredseparation = 0.0;
+      }      
     }
+    
 
     if (!speed || sys->now - *step < 1000 / speed) return; // Not enough time passed
     leds.fadeToBlackBy(255 - leds.fixture->globalBlend);
@@ -2288,42 +2290,42 @@ class Flock: public Effect {
       wind.y = Boid::randomf() * .015;
     }
 
-    for (int i = 0; i < boidCount; i++) {
-      Boid * boid = &boids[i];
-
-      if (predatorPresent) {
-        // flee from predator
-        boid->repelForce(predator->location, 10);
+    for (int i = 0; i < preyCount; i++) {
+      // flee from predators
+      for (int j = 0; j < predatorCount; j++) {
+        prey[i].repelForce(predators[j].location, 10);
       }
-      if (efficent) boid->run(boids, boidCount, true);
-      else boid->run(boids, boidCount);
+      prey[i].run(prey, preyCount, efficient);
+
+      if (preyWrap) prey[i].wrapAroundBorders(leds.size);
+      else prey[i].bounceOffBorders(0.5, leds.size);
+      PVector location = prey[i].location;
       
-      boid->wrapAroundBorders(leds.size);
-      PVector location = boid->location;
-      
-      leds.setPixelColor({int(location.x), int(location.y)}, ColorFromPalette(leds.palette, boid->colorIndex), 0);
+      leds.setPixelColor({int(location.x), int(location.y)}, ColorFromPalette(leds.palette, prey[i].colorIndex), 0);
 
       if (applyWind) {
-        boid->applyForce(wind);
+        prey[i].applyForce(wind);
         applyWind = false;
       }
     }
 
-    if (predatorPresent) {
+    for (int i = 0; i < predatorCount; i++) {
       if (gyroPredator) {
-        predator->acceleration = PVector(-mpu6050->gravityVector.x, mpu6050->gravityVector.y);
-        predator->update();
-        // ppf ("Predator Location: %f, %f Velocity: %f, %f Acceleration: %f, %f\n", predator->location.x, predator->location.y, predator->velocity.x, predator->velocity.y, predator->acceleration.x, predator->acceleration.y);
+        predators[i].acceleration = PVector(-mpu6050->gravityVector.x, mpu6050->gravityVector.y);
+        predators[i].update();
       } 
       
-      predator->run(boids, boidCount);
+      predators[i].run(prey, preyCount); //, efficient); // efficient seems to behave differently here
+      predators[i].desiredseparation = 10.0;
+      predators[i].run(predators, predatorCount); //, efficient); // efficient seems to behave differently here
+      predators[i].desiredseparation = 0.0;
       
-      predator->bounceOffBorders(0.5, leds.size);
-      // predator->wrapAroundBorders(leds.size);
+      if (predatorWrap) predators[i].wrapAroundBorders(leds.size);
+      else predators[i].bounceOffBorders(0.5, leds.size);
 
-      PVector location = predator->location;
+      PVector location = predators[i].location;
   
-      leds.setPixelColor({int(location.x), int(location.y)}, CRGB::Red, 0);
+      leds.setPixelColor({int(location.x), int(location.y)}, CRGB::Red, 0); // Hardcoded predator color
     }
 
     *step = sys->now; // Update step
@@ -2331,47 +2333,48 @@ class Flock: public Effect {
 
   void controls(Leds &leds, JsonObject parentVar) {
     Effect::controls(leds, parentVar);
+    bool *setup = leds.effectData.write<bool>(true);
 
-    ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(10), 0, 60); // 0 - 60 updates per second
-    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(10), 1, 255); // 1 - 255 boids
-    ui->initCheckBox(parentVar, "Predator Present", leds.effectData.write<bool>(true));
+    ui->initSlider(parentVar, "Speed",          leds.effectData.write<uint8_t>(10), 0, 60); // 0 - 60 updates per second
+    ui->initSlider(parentVar, "Prey Count",     leds.effectData.write<uint8_t>(30), 1, 120);
+    ui->initSlider(parentVar, "Predator Count", leds.effectData.write<uint8_t>(1), 0, 5);
     #ifdef STARBASE_USERMOD_MPU6050
       ui->initCheckBox(parentVar, "Gyro Predator", leds.effectData.write<bool>(0));
     #endif
-    ui->initCheckBox(parentVar, "Efficient", leds.effectData.write<bool>(0));
+    ui->initCheckBox(parentVar, "Prey Wrap",     leds.effectData.write<bool>(1));
+    ui->initCheckBox(parentVar, "Predator Wrap", leds.effectData.write<bool>(0));
+    ui->initCheckBox(parentVar, "Efficient",     leds.effectData.write<bool>(0));
   }
 };
 
-class FlowField: public Effect {
+class FlowField: public Effect { // Based on FlowField by Jason Cooon https://github.com/pixelmatix/aurora
   const char * name() {return "FlowField";}
   unsigned8     dim() {return _2D;}
-  const char * tags() {return "💫🧭";}
+  const char * tags() {return "💫";}
 
   void loop(Leds &leds) {
     // UI Variables
+    bool   *setup = leds.effectData.readWrite<bool>();
     uint8_t speed = leds.effectData.read<uint8_t>(); // Updates per second
     uint8_t scale = leds.effectData.read<uint8_t>();
     uint8_t boidCount = leds.effectData.read<uint8_t>();
 
     // Effect Variables
-    unsigned long *step  = leds.effectData.readWrite<unsigned long>();
+    unsigned long *step    = leds.effectData.readWrite<unsigned long>();
     unsigned long *hueStep = leds.effectData.readWrite<unsigned long>();
-    byte *hue            = leds.effectData.readWrite<byte>();
-    byte *setup          = leds.effectData.readWrite<byte>();
-    Boid *boids          = leds.effectData.readWrite<Boid>(255);
-    int *prevBoidCount   = leds.effectData.readWrite<int>();
-    uint16_t *x          = leds.effectData.readWrite<uint16_t>();
-    uint16_t *y          = leds.effectData.readWrite<uint16_t>();
-    uint16_t *z          = leds.effectData.readWrite<uint16_t>();
+    byte *hue   = leds.effectData.readWrite<byte>();
+    Boid *boids = leds.effectData.readWrite<Boid>(255);
+    uint16_t *x = leds.effectData.readWrite<uint16_t>();
+    uint16_t *y = leds.effectData.readWrite<uint16_t>();
+    uint16_t *z = leds.effectData.readWrite<uint16_t>();
 
-    if (*setup != 123 || *prevBoidCount != boidCount) {
-      *setup = 123;
-      *prevBoidCount = boidCount;
+    if (*setup) {
+      *setup = false;
       leds.fill_solid(CRGB::Black, true);
       *x = random16();
       *y = random16();
       *z = random16();
-      for (int i = 0; i < boidCount; i++) {
+      for (int i = 0; i < 255; i++) { // Initialize all boids
         boids[i] = Boid(random(leds.size.x), 0);
       }
     }
@@ -2416,13 +2419,15 @@ class FlowField: public Effect {
 
   void controls(Leds &leds, JsonObject parentVar) {
     Effect::controls(leds, parentVar);
+    bool *setup = leds.effectData.write<bool>(true);
     ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(30), 0, 60); // 0 - 60 updates per second
     ui->initSlider(parentVar, "Scale", leds.effectData.write<uint8_t>(26), 1, 255);
     ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(40), 1, 255); // 1 - 255 boids
+    ui->initText(parentVar, "Set Blending to 240ish", "", false, true);
   }
 };
 
-class Bounce: public Effect {
+class Bounce: public Effect { // Based on Bounce by Jason Coon https://github.com/pixelmatix/aurora
   const char * name() {return "Bounce";}
   unsigned8     dim() {return _2D;}
   const char * tags() {return "💫";}
@@ -2435,7 +2440,7 @@ class Bounce: public Effect {
 
     // Effect Variables
     unsigned long *step = leds.effectData.readWrite<unsigned long>();
-    Boid *boids         = leds.effectData.readWrite<Boid>(255);
+    Boid *boids = leds.effectData.readWrite<Boid>(255);
 
     if (*setup) {
       *setup = false;
@@ -2462,7 +2467,6 @@ class Bounce: public Effect {
       Boid boid = boids[i];
 
       boid.applyForce(gravity);
-
       boid.update();
 
       leds.setPixelColor({int(boid.location.x), int(boid.location.y)}, ColorFromPalette(leds.palette, boid.colorIndex), 0);
@@ -2482,21 +2486,14 @@ class Bounce: public Effect {
     Effect::controls(leds, parentVar);
     bool *setup = leds.effectData.write<bool>(true);
     ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(60), 0, 60); // 0 - 60 updates per second
-    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(leds.size.x), 1, 255, false, [&leds](JsonObject var, uint8_t rowNr, uint8_t funType) { switch (funType) {
+    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(leds.size.x), 1, leds.size.x, false, [setup](JsonObject var, uint8_t rowNr, uint8_t funType) { switch (funType) {
       case onChange:
-        leds.effectData.begin();
-        leds.effectData.write<bool>(true); // Set setup to true This does not work, change later
+        *setup = true;
         return true;
       default: return false;
     }});
   }
 };
-
-
-
-
-
-
 
 #ifdef STARLIGHT_USERMOD_WLEDAUDIO
 
