@@ -20,6 +20,8 @@
   #include "../User/UserModMPU6050.h"
 #endif
 
+#include "../App/Boid.h"
+
 //utility function
 float distance(float x1, float y1, float z1, float x2, float y2, float z2) {
   return sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
@@ -2222,11 +2224,271 @@ class ParticleTest: public Effect {
     ui->initSlider  (parentVar, "Number of Particles",     leds.effectData.write<uint8_t>(10), 1, 255);
     ui->initCheckBox(parentVar, "Barriers",                leds.effectData.write<bool>(0));
     #ifdef STARBASE_USERMOD_MPU6050
-      ui->initCheckBox(parentVar, "Gyro",                    leds.effectData.write<bool>(0));
+      ui->initCheckBox(parentVar, "Gyro",                  leds.effectData.write<bool>(0));
     #endif
     ui->initCheckBox(parentVar, "Random Gravity",          leds.effectData.write<bool>(1));
     ui->initSlider  (parentVar, "Gravity Change Interval", leds.effectData.write<uint8_t>(5), 1, 10);
     ui->initCheckBox(parentVar, "Debug Print",             leds.effectData.write<bool>(0));
+  }
+};
+
+class Flock: public Effect {
+  const char * name() {return "Flock";}
+  unsigned8     dim() {return _2D;}
+  const char * tags() {return "💫";}
+
+  void loop(Leds &leds) {
+    // UI Variables
+    uint8_t speed = leds.effectData.read<uint8_t>(); // Updates per second
+    uint8_t boidCount = leds.effectData.read<uint8_t>();
+    bool predatorPresent = leds.effectData.read<bool>();
+    #ifdef STARBASE_USERMOD_MPU6050
+      bool gyroPredator            = leds.effectData.read<bool>();
+    #else
+      bool gyroPredator = false;
+    #endif
+    bool efficent = leds.effectData.read<bool>();
+
+    // Effect Variables
+    unsigned long *step  = leds.effectData.readWrite<unsigned long>();
+    byte *setup          = leds.effectData.readWrite<byte>();
+    Boid *boids          = leds.effectData.readWrite<Boid>(255);
+    Boid *predator       = leds.effectData.readWrite<Boid>();
+    int *prevBoidCount   = leds.effectData.readWrite<int>();
+
+    if (*setup != 123 || *prevBoidCount != boidCount) {
+      *setup = 123;
+      *prevBoidCount = boidCount;
+      leds.fill_solid(CRGB::Black, true);
+
+      for (int i = 0; i < boidCount; i++) {
+        boids[i] = Boid(leds.size.x / 2, leds.size.y / 2);
+        boids[i].maxspeed = 0.380;
+        boids[i].maxforce = 0.015;
+        boids[i].colorIndex = random8();
+      }
+
+      predatorPresent = true;
+      predator->location = PVector(0, 0);
+      predator->maxspeed = 0.385;
+      predator->maxforce = 0.020;
+      predator->neighbordist = 16.0;
+      predator->desiredseparation = 0.0;
+      
+    }
+
+    if (!speed || sys->now - *step < 1000 / speed) return; // Not enough time passed
+    leds.fadeToBlackBy(255 - leds.fixture->globalBlend);
+
+    PVector wind;
+
+    bool applyWind = random(0, 255) > 250;
+    if (applyWind) {
+      wind.x = Boid::randomf() * .015;
+      wind.y = Boid::randomf() * .015;
+    }
+
+    for (int i = 0; i < boidCount; i++) {
+      Boid * boid = &boids[i];
+
+      if (predatorPresent) {
+        // flee from predator
+        boid->repelForce(predator->location, 10);
+      }
+      if (efficent) boid->run(boids, boidCount, true);
+      else boid->run(boids, boidCount);
+      
+      boid->wrapAroundBorders(leds.size);
+      PVector location = boid->location;
+      
+      leds.setPixelColor({int(location.x), int(location.y)}, ColorFromPalette(leds.palette, boid->colorIndex), 0);
+
+      if (applyWind) {
+        boid->applyForce(wind);
+        applyWind = false;
+      }
+    }
+
+    if (predatorPresent) {
+      if (gyroPredator) {
+        predator->acceleration = PVector(-mpu6050->gravityVector.x, mpu6050->gravityVector.y);
+        predator->update();
+        // ppf ("Predator Location: %f, %f Velocity: %f, %f Acceleration: %f, %f\n", predator->location.x, predator->location.y, predator->velocity.x, predator->velocity.y, predator->acceleration.x, predator->acceleration.y);
+      } 
+      
+      predator->run(boids, boidCount);
+      
+      predator->bounceOffBorders(0.5, leds.size);
+      // predator->wrapAroundBorders(leds.size);
+
+      PVector location = predator->location;
+  
+      leds.setPixelColor({int(location.x), int(location.y)}, CRGB::Red, 0);
+    }
+
+    *step = sys->now; // Update step
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+    Effect::controls(leds, parentVar);
+
+    ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(10), 0, 60); // 0 - 60 updates per second
+    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(10), 1, 255); // 1 - 255 boids
+    ui->initCheckBox(parentVar, "Predator Present", leds.effectData.write<bool>(true));
+    #ifdef STARBASE_USERMOD_MPU6050
+      ui->initCheckBox(parentVar, "Gyro Predator", leds.effectData.write<bool>(0));
+    #endif
+    ui->initCheckBox(parentVar, "Efficient", leds.effectData.write<bool>(0));
+  }
+};
+
+class FlowField: public Effect {
+  const char * name() {return "FlowField";}
+  unsigned8     dim() {return _2D;}
+  const char * tags() {return "💫🧭";}
+
+  void loop(Leds &leds) {
+    // UI Variables
+    uint8_t speed = leds.effectData.read<uint8_t>(); // Updates per second
+    uint8_t scale = leds.effectData.read<uint8_t>();
+    uint8_t boidCount = leds.effectData.read<uint8_t>();
+
+    // Effect Variables
+    unsigned long *step  = leds.effectData.readWrite<unsigned long>();
+    unsigned long *hueStep = leds.effectData.readWrite<unsigned long>();
+    byte *hue            = leds.effectData.readWrite<byte>();
+    byte *setup          = leds.effectData.readWrite<byte>();
+    Boid *boids          = leds.effectData.readWrite<Boid>(255);
+    int *prevBoidCount   = leds.effectData.readWrite<int>();
+    uint16_t *x          = leds.effectData.readWrite<uint16_t>();
+    uint16_t *y          = leds.effectData.readWrite<uint16_t>();
+    uint16_t *z          = leds.effectData.readWrite<uint16_t>();
+
+    if (*setup != 123 || *prevBoidCount != boidCount) {
+      *setup = 123;
+      *prevBoidCount = boidCount;
+      leds.fill_solid(CRGB::Black, true);
+      *x = random16();
+      *y = random16();
+      *z = random16();
+      for (int i = 0; i < boidCount; i++) {
+        boids[i] = Boid(random(leds.size.x), 0);
+      }
+    }
+
+    if (sys->now - *hueStep > 200) {
+      *hueStep = sys->now;
+      *hue += 1;
+    }
+
+    if (!speed || sys->now - *step < 1000 / speed) return; // Not enough time passed
+    leds.fadeToBlackBy(255 - leds.fixture->globalBlend);
+
+    speed = 1;
+    
+    for (int i = 0; i < boidCount; i++) {
+      Boid * boid = &boids[i];
+
+      int ioffset = scale * boid->location.x;
+      int joffset = scale * boid->location.y;
+
+      byte angle = inoise8(*x + ioffset, *y + joffset, *z);
+
+      boid->velocity.x = (float) sin8(angle) * 0.0078125 - 1.0;
+      boid->velocity.y = -((float)cos8(angle) * 0.0078125 - 1.0);
+      boid->update();
+
+      leds.setPixelColor({int(boid->location.x), int(boid->location.y)}, ColorFromPalette(leds.palette, angle + *hue), 0);
+
+      if (boid->location.x < 0 || boid->location.x >= leds.size.x ||
+          boid->location.y < 0 || boid->location.y >= leds.size.y) {
+        boid->location.x = random(leds.size.x);
+        boid->location.y = 0;
+      }
+    }
+
+    *x += speed;
+    *y += speed;
+    *z += speed;
+
+    *step = sys->now; // Update step
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+    Effect::controls(leds, parentVar);
+    ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(30), 0, 60); // 0 - 60 updates per second
+    ui->initSlider(parentVar, "Scale", leds.effectData.write<uint8_t>(26), 1, 255);
+    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(40), 1, 255); // 1 - 255 boids
+  }
+};
+
+class Bounce: public Effect {
+  const char * name() {return "Bounce";}
+  unsigned8     dim() {return _2D;}
+  const char * tags() {return "💫";}
+
+  void loop(Leds &leds) {
+    // UI Variables
+    bool *setup = leds.effectData.readWrite<bool>();
+    uint8_t speed = leds.effectData.read<uint8_t>(); // Updates per second
+    uint8_t boidCount = leds.effectData.read<uint8_t>();
+
+    // Effect Variables
+    unsigned long *step = leds.effectData.readWrite<unsigned long>();
+    Boid *boids         = leds.effectData.readWrite<Boid>(255);
+
+    if (*setup) {
+      *setup = false;
+      leds.fill_solid(CRGB::Black, true);
+      
+      unsigned int colorWidth = 256 / boidCount;
+
+      for (int i = 0; i < boidCount; i++) {
+        boids[i] = Boid(i, 0);
+        boids[i].velocity.x = 0;
+        boids[i].velocity.y = i * -0.01;
+        boids[i].maxforce = 10;
+        boids[i].maxspeed = 10;
+        boids[i].colorIndex = colorWidth * i;
+      }
+    }
+
+    if (!speed || sys->now - *step < 1000 / speed) return; // Not enough time passed
+    leds.fadeToBlackBy(255 - leds.fixture->globalBlend);
+
+    PVector gravity = PVector(0, 0.0125);
+
+    for (int i = 0; i < boidCount; i++) {
+      Boid boid = boids[i];
+
+      boid.applyForce(gravity);
+
+      boid.update();
+
+      leds.setPixelColor({int(boid.location.x), int(boid.location.y)}, ColorFromPalette(leds.palette, boid.colorIndex), 0);
+
+      if (boid.location.y >= leds.size.y - 1) {
+          boid.location.y = leds.size.y - 1;
+          boid.velocity.y *= -1.0;
+      }
+
+      boids[i] = boid;
+    }
+
+    *step = sys->now; // Update step
+  }
+
+  void controls(Leds &leds, JsonObject parentVar) {
+    Effect::controls(leds, parentVar);
+    bool *setup = leds.effectData.write<bool>(true);
+    ui->initSlider(parentVar, "Speed", leds.effectData.write<uint8_t>(60), 0, 60); // 0 - 60 updates per second
+    ui->initSlider(parentVar, "Number of Boids", leds.effectData.write<uint8_t>(leds.size.x), 1, 255, false, [&leds](JsonObject var, uint8_t rowNr, uint8_t funType) { switch (funType) {
+      case onChange:
+        leds.effectData.begin();
+        leds.effectData.write<bool>(true); // Set setup to true This does not work, change later
+        return true;
+      default: return false;
+    }});
   }
 };
 

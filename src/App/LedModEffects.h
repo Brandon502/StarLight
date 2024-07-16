@@ -105,6 +105,9 @@ public:
     effects.push_back(new GameOfLife);
     effects.push_back(new RubiksCube);
     effects.push_back(new ParticleTest);
+    effects.push_back(new Flock);
+    effects.push_back(new FlowField);
+    effects.push_back(new Bounce);
     #ifdef STARLIGHT_USERMOD_WLEDAUDIO
       //2D WLED
       effects.push_back(new Waverly);
